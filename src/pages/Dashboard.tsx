@@ -3,9 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { MonthPicker } from "@/components/MonthPicker";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { brl, monthRange, monthInputValue } from "@/lib/format";
+import { brl, daysInMonth, monthDate, monthRange } from "@/lib/format";
 import { useCompetenciaState } from "@/hooks/useLatestCompetencia";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Building2, TrendingUp, Wallet, BarChart3 } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
@@ -31,7 +30,7 @@ export default function Dashboard() {
     const liquido = reservas.reduce((s, r: any) => s + Number(r.valor_liquido || 0), 0);
 
     // ocupação: noites ocupadas / (imóveis * dias do mês)
-    const dias = new Date(new Date(end).getTime()).getDate();
+    const dias = daysInMonth(mes);
     let noites = 0;
     reservas.forEach((r: any) => {
       const ci = new Date(r.check_in).getTime();
@@ -50,7 +49,7 @@ export default function Dashboard() {
     setTopImoveis(top);
 
     // evolução 12 meses
-    const dt = new Date(mes + "-01");
+    const dt = monthDate(mes);
     const meses: { mes: string; valor: number }[] = [];
     for (let i = 11; i >= 0; i--) {
       const d = new Date(dt.getFullYear(), dt.getMonth() - i, 1);

@@ -105,7 +105,19 @@ export default function DREInvestidor() {
         }
       />
       <div className="space-y-4 p-6">
-        {investidor && (
+        {!investidorId && (
+          <Card className="shadow-card"><CardContent className="flex flex-col items-center gap-3 py-12 text-center">
+            <Building2 className="h-10 w-10 text-muted-foreground" />
+            <div className="text-sm text-muted-foreground">Selecione um investidor para ver o demonstrativo.</div>
+          </CardContent></Card>
+        )}
+        {investidor && imoveis.length === 0 && (
+          <Card className="shadow-card"><CardContent className="flex flex-col items-center gap-3 py-12 text-center">
+            <Building2 className="h-10 w-10 text-muted-foreground" />
+            <div className="text-sm text-muted-foreground">{investidor.nome} ainda não possui imóveis cadastrados.</div>
+          </CardContent></Card>
+        )}
+        {investidor && imoveis.length > 0 && (
           <Card className="shadow-card">
             <CardContent className="flex flex-wrap items-center justify-between gap-3 p-5">
               <div>

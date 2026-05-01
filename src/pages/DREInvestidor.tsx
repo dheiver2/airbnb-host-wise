@@ -4,12 +4,12 @@ import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { brl, monthInputValue, monthRange, monthBR } from "@/lib/format";
+import { brl, monthRange, monthBR } from "@/lib/format";
 import { useCompetenciaState } from "@/hooks/useLatestCompetencia";
-import { Printer } from "lucide-react";
+import { Combobox } from "@/components/Combobox";
+import { Printer, Building2 } from "lucide-react";
 
 interface Linha { label: string; valor: number; tipo?: "receita" | "despesa" | "total" | "subtotal"; }
 

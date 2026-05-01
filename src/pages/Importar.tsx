@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Papa from "papaparse";
+import * as XLSX from "xlsx";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -16,40 +17,54 @@ import { brl, dateBR } from "@/lib/format";
 
 type Tipo = "faturamento" | "adiantamentos";
 
-const FIELD_OPTIONS: Record<Tipo, { key: string; label: string }[]> = {
+const FIELD_OPTIONS: Record<Tipo, { key: string; label: string; required?: boolean }[]> = {
   faturamento: [
-    { key: "codigo_airbnb", label: "Código Airbnb" },
-    { key: "codigo_imovel", label: "Código do imóvel" },
-    { key: "check_in", label: "Check-in (data)" },
-    { key: "check_out", label: "Check-out (data)" },
-    { key: "hospedes", label: "Hóspedes" },
-    { key: "valor_bruto", label: "Valor bruto" },
-    { key: "taxas_airbnb", label: "Taxas Airbnb" },
-    { key: "valor_liquido", label: "Valor líquido" },
+    { key: "anuncio", label: "Anúncio (extrai código)", required: true },
+    { key: "check_in", label: "Data de início (check-in)", required: true },
+    { key: "check_out", label: "Data de término (check-out)", required: true },
+    { key: "hospedes", label: "Hóspede (nome)" },
+    { key: "noites", label: "Noites" },
+    { key: "valor", label: "Valor", required: true },
   ],
   adiantamentos: [
-    { key: "codigo_imovel", label: "Código do imóvel" },
-    { key: "investidor_nome", label: "Nome do investidor" },
-    { key: "data", label: "Data" },
-    { key: "valor", label: "Valor" },
+    { key: "anuncio", label: "Anúncio (extrai código)", required: true },
+    { key: "data", label: "Data do pagamento", required: true },
+    { key: "valor", label: "Valor", required: true },
   ],
 };
 
+// Extrai o código do imóvel de strings tipo "ANA104 - 2/4 Beira Mar..." ou "Atauá | Pé na Areia..."
+function extractCodigo(anuncio: string): string | null {
+  if (!anuncio) return null;
+  const s = String(anuncio).trim();
+  // padrão "CODIGO - resto"
+  const m = s.match(/^([A-Za-zÀ-ÿ0-9]+)\s*[-–|]/);
+  if (m) return m[1].trim();
+  // fallback: primeira palavra
+  const w = s.split(/\s+/)[0];
+  return w || null;
+}
+
 function parseDate(v: any): string | null {
-  if (!v) return null;
+  if (v == null || v === "") return null;
+  if (v instanceof Date && !isNaN(v.getTime())) return v.toISOString().slice(0, 10);
   const s = String(v).trim();
-  // dd/mm/yyyy
-  const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  if (m) return `${m[3]}-${m[2]}-${m[1]}`;
-  // yyyy-mm-dd
+  // MM/DD/YYYY (formato Airbnb)
+  let m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (m) return `${m[3]}-${m[1]}-${m[2]}`;
+  // DD/MM/YYYY
+  m = s.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  if (m) return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
   if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
   const d = new Date(s);
   if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
   return null;
 }
+
 function parseNum(v: any): number {
   if (v == null || v === "") return 0;
-  const s = String(v).replace(/[R$\s.]/g, "").replace(",", ".");
+  if (typeof v === "number") return v;
+  const s = String(v).replace(/[R$\s]/g, "").replace(/\.(?=\d{3}(\D|$))/g, "").replace(",", ".");
   const n = Number(s);
   return isNaN(n) ? 0 : n;
 }
@@ -63,9 +78,12 @@ export default function Importar() {
   const [investidores, setInvestidores] = useState<any[]>([]);
   const [history, setHistory] = useState<any[]>([]);
   const [filename, setFilename] = useState("");
+  const [sheetNames, setSheetNames] = useState<string[]>([]);
+  const [activeSheet, setActiveSheet] = useState<string>("");
+  const [workbook, setWorkbook] = useState<XLSX.WorkBook | null>(null);
 
   useEffect(() => {
-    supabase.from("imoveis").select("id, codigo").then(({ data }) => setImoveis(data ?? []));
+    supabase.from("imoveis").select("id, codigo, investidor_id").then(({ data }) => setImoveis(data ?? []));
     supabase.from("investidores").select("id, nome").then(({ data }) => setInvestidores(data ?? []));
     loadHistory();
   }, []);
@@ -75,79 +93,146 @@ export default function Importar() {
     setHistory(data ?? []);
   }
 
-  function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+  function applyAutoMapping(hs: string[], t: Tipo) {
+    const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+    const matchers: Record<string, string[]> = {
+      anuncio: ["anuncio", "rotulosdelinha", "imovel"],
+      check_in: ["datadeinicio", "checkin", "inicio"],
+      check_out: ["datadetermino", "checkout", "termino", "fim"],
+      hospedes: ["hospede", "hospedes"],
+      noites: ["noites", "diarias"],
+      valor: ["valor", "somadevalor", "valorbruto", "total"],
+      data: ["data", "datapagamento"],
+    };
+    const auto: Record<string, string> = {};
+    FIELD_OPTIONS[t].forEach((f) => {
+      const targets = matchers[f.key] ?? [f.key];
+      const guess = hs.find((h) => targets.some((tg) => norm(h).includes(tg)));
+      if (guess) auto[f.key] = guess;
+    });
+    setMapping(auto);
+  }
+
+  function loadSheetRows(wb: XLSX.WorkBook, sheetName: string) {
+    const ws = wb.Sheets[sheetName];
+    // pega como matriz para detectar a linha de cabeçalho
+    const aoa: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: "" });
+    if (!aoa.length) { setRows([]); setHeaders([]); return; }
+    // encontra a primeira linha não vazia que contém >=3 strings (cabeçalho)
+    let headerIdx = aoa.findIndex((r) => r.filter((c) => String(c).trim() !== "").length >= 3);
+    if (headerIdx < 0) headerIdx = 0;
+    const hs = aoa[headerIdx].map((c, i) => String(c).trim() || `Coluna ${i + 1}`);
+    const data = aoa.slice(headerIdx + 1)
+      .filter((r) => r.some((c) => String(c).trim() !== ""))
+      .map((r) => Object.fromEntries(hs.map((h, i) => [h, r[i] ?? ""])));
+    setHeaders(hs);
+    setRows(data);
+    applyAutoMapping(hs, tipo);
+  }
+
+  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     setFilename(file.name);
-    Papa.parse(file, {
-      header: true, skipEmptyLines: true,
-      complete: (res) => {
-        const rs = res.data as any[];
-        setRows(rs);
-        const hs = Object.keys(rs[0] ?? {});
-        setHeaders(hs);
-        // auto-mapeamento por proximidade
-        const auto: Record<string, string> = {};
-        FIELD_OPTIONS[tipo].forEach((f) => {
-          const guess = hs.find((h) => h.toLowerCase().replace(/[^a-z]/g, "").includes(f.key.replace(/_/g, "").slice(0, 5)));
-          if (guess) auto[f.key] = guess;
-        });
-        setMapping(auto);
-      },
-    });
+    const isXlsx = /\.xlsx?$/i.test(file.name);
+    if (isXlsx) {
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: "array" });
+      setWorkbook(wb);
+      setSheetNames(wb.SheetNames);
+      // escolhe automaticamente a aba com mais linhas/colunas (geralmente a aba de dados, não a pivot)
+      let best = wb.SheetNames[0];
+      let bestScore = -1;
+      wb.SheetNames.forEach((n) => {
+        const ws = wb.Sheets[n];
+        const ref = ws["!ref"]; if (!ref) return;
+        const r = XLSX.utils.decode_range(ref);
+        const score = (r.e.r - r.s.r) * (r.e.c - r.s.c + 1);
+        if (score > bestScore) { bestScore = score; best = n; }
+      });
+      setActiveSheet(best);
+      loadSheetRows(wb, best);
+    } else {
+      setWorkbook(null); setSheetNames([]); setActiveSheet("");
+      Papa.parse(file, {
+        header: true, skipEmptyLines: true,
+        complete: (res) => {
+          const rs = res.data as any[];
+          const hs = Object.keys(rs[0] ?? {});
+          setHeaders(hs); setRows(rs); applyAutoMapping(hs, tipo);
+        },
+      });
+    }
   }
+
+  function onChangeSheet(name: string) {
+    setActiveSheet(name);
+    if (workbook) loadSheetRows(workbook, name);
+  }
+
+  const codigoIndex = useMemo(() => {
+    const m = new Map<string, any>();
+    imoveis.forEach((i) => m.set(i.codigo.toLowerCase(), i));
+    return m;
+  }, [imoveis]);
 
   async function importar() {
     if (rows.length === 0) return toast.error("Carregue um arquivo");
+    const required = FIELD_OPTIONS[tipo].filter((f) => f.required);
+    for (const f of required) {
+      if (!mapping[f.key]) return toast.error(`Mapeie o campo: ${f.label}`);
+    }
+
     let inseridos = 0, duplicados = 0, erros = 0;
+    const errosDetalhe: string[] = [];
 
     if (tipo === "faturamento") {
       for (const row of rows) {
-        const codigoImovel = row[mapping.codigo_imovel];
-        const im = imoveis.find((i) => i.codigo === String(codigoImovel ?? "").trim());
-        if (!im) { erros++; continue; }
-        const checkOut = parseDate(row[mapping.check_out]);
+        const anuncio = row[mapping.anuncio];
+        const codigo = extractCodigo(String(anuncio ?? ""));
+        if (!codigo) { erros++; continue; }
+        const im = codigoIndex.get(codigo.toLowerCase());
+        if (!im) { erros++; if (errosDetalhe.length < 5) errosDetalhe.push(`Imóvel não encontrado: ${codigo}`); continue; }
         const checkIn = parseDate(row[mapping.check_in]);
+        const checkOut = parseDate(row[mapping.check_out]);
         if (!checkIn || !checkOut) { erros++; continue; }
+        const valor = parseNum(row[mapping.valor]);
+        if (valor <= 0) { erros++; continue; }
         const competencia = `${checkOut.slice(0, 7)}-01`;
-        const codigoAirbnb = row[mapping.codigo_airbnb] ? String(row[mapping.codigo_airbnb]).trim() : null;
+        const hospede = mapping.hospedes ? String(row[mapping.hospedes] ?? "").trim() : "";
 
-        // dedupe
-        if (codigoAirbnb) {
-          const { data: dup } = await supabase.from("reservas").select("id").eq("codigo_airbnb", codigoAirbnb).eq("imovel_id", im.id).maybeSingle();
-          if (dup) { duplicados++; continue; }
-        }
+        // dedupe por (imóvel, check_in, check_out, valor)
+        const { data: dup } = await supabase.from("reservas").select("id")
+          .eq("imovel_id", im.id).eq("check_in", checkIn).eq("check_out", checkOut)
+          .eq("valor_bruto", valor).maybeSingle();
+        if (dup) { duplicados++; continue; }
+
         const { error } = await supabase.from("reservas").insert({
-          codigo_airbnb: codigoAirbnb, imovel_id: im.id,
-          check_in: checkIn, check_out: checkOut,
-          hospedes: Number(row[mapping.hospedes]) || 1,
-          valor_bruto: parseNum(row[mapping.valor_bruto]),
-          taxas_airbnb: parseNum(row[mapping.taxas_airbnb]),
-          valor_liquido: parseNum(row[mapping.valor_liquido]) || parseNum(row[mapping.valor_bruto]),
+          codigo_airbnb: hospede ? hospede.slice(0, 60) : null,
+          imovel_id: im.id, check_in: checkIn, check_out: checkOut,
+          hospedes: 1, valor_bruto: valor, taxas_airbnb: 0, valor_liquido: valor,
           mes_competencia: competencia,
         });
-        if (error) erros++; else inseridos++;
+        if (error) { erros++; if (errosDetalhe.length < 5) errosDetalhe.push(error.message); }
+        else inseridos++;
       }
     } else {
       for (const row of rows) {
+        const anuncio = row[mapping.anuncio];
+        const codigo = extractCodigo(String(anuncio ?? ""));
+        if (!codigo) { erros++; continue; }
+        const im = codigoIndex.get(codigo.toLowerCase());
+        if (!im) { erros++; if (errosDetalhe.length < 5) errosDetalhe.push(`Imóvel não encontrado: ${codigo}`); continue; }
         const data = parseDate(row[mapping.data]);
-        if (!data) { erros++; continue; }
-        const codigoImovel = row[mapping.codigo_imovel];
-        const im = imoveis.find((i) => i.codigo === String(codigoImovel ?? "").trim());
-        const nome = String(row[mapping.investidor_nome] ?? "").trim();
-        let invId = im ? null : investidores.find((x) => x.nome.toLowerCase() === nome.toLowerCase())?.id;
-        if (im && !invId) {
-          const { data: imv } = await supabase.from("imoveis").select("investidor_id").eq("id", im.id).single();
-          invId = imv?.investidor_id;
-        }
-        if (!invId) { erros++; continue; }
         const valor = parseNum(row[mapping.valor]);
+        if (!data || valor <= 0) { erros++; continue; }
         const competencia = `${data.slice(0, 7)}-01`;
         const { error } = await supabase.from("adiantamentos").insert({
-          investidor_id: invId, imovel_id: im?.id ?? null,
+          investidor_id: im.investidor_id, imovel_id: im.id,
           data, valor, origem: "airbnb_direto", mes_competencia: competencia,
         });
-        if (error) erros++; else inseridos++;
+        if (error) { erros++; if (errosDetalhe.length < 5) errosDetalhe.push(error.message); }
+        else inseridos++;
       }
     }
 
@@ -155,31 +240,44 @@ export default function Importar() {
       tipo, arquivo: filename, total_linhas: rows.length, inseridos, duplicados, erros,
     });
 
-    toast.success(`Importação concluída: ${inseridos} inseridos, ${duplicados} duplicados, ${erros} erros`);
-    setRows([]); setHeaders([]); setMapping({}); setFilename("");
+    if (erros > 0 && errosDetalhe.length) {
+      toast.warning(`Concluído com erros. Ex.: ${errosDetalhe.join(" | ")}`);
+    }
+    toast.success(`Importação: ${inseridos} inseridos, ${duplicados} duplicados, ${erros} erros`);
+    setRows([]); setHeaders([]); setMapping({}); setFilename(""); setWorkbook(null); setSheetNames([]); setActiveSheet("");
     loadHistory();
   }
 
   return (
     <>
-      <PageHeader title="Importar dados do Airbnb" description="Suba CSV de faturamento ou adiantamentos para processamento em lote." />
+      <PageHeader title="Importar dados do Airbnb" description="Suba CSV ou XLSX de faturamento ou adiantamentos. O código do imóvel é extraído do nome do anúncio." />
       <div className="space-y-4 p-6">
-        <Tabs value={tipo} onValueChange={(v) => { setTipo(v as Tipo); setRows([]); setMapping({}); }}>
+        <Tabs value={tipo} onValueChange={(v) => { setTipo(v as Tipo); setRows([]); setHeaders([]); setMapping({}); setWorkbook(null); setSheetNames([]); }}>
           <TabsList>
-            <TabsTrigger value="faturamento">Faturamento acumulado</TabsTrigger>
+            <TabsTrigger value="faturamento">Faturamento (Base Total)</TabsTrigger>
             <TabsTrigger value="adiantamentos">Adiantamentos pagos</TabsTrigger>
           </TabsList>
 
           {(["faturamento", "adiantamentos"] as Tipo[]).map((t) => (
             <TabsContent key={t} value={t} className="space-y-4">
               <Card className="shadow-card">
-                <CardHeader><CardTitle className="text-base">1. Selecione o arquivo CSV</CardTitle></CardHeader>
-                <CardContent>
+                <CardHeader><CardTitle className="text-base">1. Selecione o arquivo (.csv ou .xlsx)</CardTitle></CardHeader>
+                <CardContent className="space-y-3">
                   <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/30 px-6 py-10 text-center hover:bg-muted/50">
                     <Upload className="mb-2 h-6 w-6 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">{filename || "Clique para enviar um arquivo .csv"}</span>
-                    <Input type="file" accept=".csv,text/csv" className="hidden" onChange={onFile} />
+                    <span className="text-sm text-muted-foreground">{filename || "Clique para enviar .csv ou .xlsx"}</span>
+                    <Input type="file" accept=".csv,.xlsx,.xls,text/csv" className="hidden" onChange={onFile} />
                   </label>
+                  {sheetNames.length > 1 && (
+                    <div className="space-y-1.5 max-w-sm">
+                      <Label>Aba da planilha</Label>
+                      <Select value={activeSheet} onValueChange={onChangeSheet}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>{sheetNames.map((n) => <SelectItem key={n} value={n}>{n}</SelectItem>)}</SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">Selecione a aba com os dados detalhados (não o resumo/pivô).</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
@@ -191,7 +289,7 @@ export default function Importar() {
                       <div className="grid gap-3 sm:grid-cols-2">
                         {FIELD_OPTIONS[t].map((f) => (
                           <div key={f.key} className="space-y-1.5">
-                            <Label>{f.label}</Label>
+                            <Label>{f.label}{f.required && <span className="text-destructive"> *</span>}</Label>
                             <Select value={mapping[f.key] ?? ""} onValueChange={(v) => setMapping({ ...mapping, [f.key]: v })}>
                               <SelectTrigger><SelectValue placeholder="Selecione coluna" /></SelectTrigger>
                               <SelectContent>{headers.map((h) => <SelectItem key={h} value={h}>{h}</SelectItem>)}</SelectContent>
@@ -213,18 +311,31 @@ export default function Importar() {
                       <div className="max-h-[360px] overflow-auto">
                         <Table>
                           <TableHeader><TableRow>
+                            <TableHead>Código</TableHead>
                             {FIELD_OPTIONS[t].map((f) => <TableHead key={f.key}>{f.label}</TableHead>)}
                           </TableRow></TableHeader>
                           <TableBody>
-                            {rows.slice(0, 50).map((r, i) => (
-                              <TableRow key={i}>
-                                {FIELD_OPTIONS[t].map((f) => {
-                                  const raw = r[mapping[f.key]];
-                                  const isVal = ["valor", "valor_bruto", "taxas_airbnb", "valor_liquido"].includes(f.key);
-                                  return <TableCell key={f.key} className={isVal ? "num" : ""}>{isVal ? brl(parseNum(raw)) : String(raw ?? "—")}</TableCell>;
-                                })}
-                              </TableRow>
-                            ))}
+                            {rows.slice(0, 50).map((r, i) => {
+                              const cod = mapping.anuncio ? extractCodigo(String(r[mapping.anuncio] ?? "")) : null;
+                              const known = cod ? codigoIndex.has(cod.toLowerCase()) : false;
+                              return (
+                                <TableRow key={i}>
+                                  <TableCell>
+                                    {cod ? (
+                                      <Badge variant={known ? "default" : "destructive"}>{cod}</Badge>
+                                    ) : <span className="text-muted-foreground">—</span>}
+                                  </TableCell>
+                                  {FIELD_OPTIONS[t].map((f) => {
+                                    const raw = r[mapping[f.key]];
+                                    const isVal = ["valor"].includes(f.key);
+                                    const isDate = ["check_in", "check_out", "data"].includes(f.key);
+                                    return <TableCell key={f.key} className={isVal ? "num" : ""}>
+                                      {isVal ? brl(parseNum(raw)) : isDate ? (parseDate(raw) ? dateBR(parseDate(raw)!) : String(raw ?? "—")) : String(raw ?? "—")}
+                                    </TableCell>;
+                                  })}
+                                </TableRow>
+                              );
+                            })}
                           </TableBody>
                         </Table>
                       </div>

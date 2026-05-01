@@ -91,10 +91,14 @@ export default function DREInvestidor() {
         description="Demonstrativo mensal por proprietário."
         actions={
           <div className="flex items-center gap-2 print:hidden">
-            <Select value={investidorId} onValueChange={setInvestidorId}>
-              <SelectTrigger className="w-[220px]"><SelectValue placeholder="Investidor" /></SelectTrigger>
-              <SelectContent>{investidores.map((i) => <SelectItem key={i.id} value={i.id}>{i.nome}</SelectItem>)}</SelectContent>
-            </Select>
+            <Combobox
+              options={investidores.map((i) => ({ value: i.id, label: i.nome }))}
+              value={investidorId}
+              onChange={setInvestidorId}
+              placeholder="Selecione o investidor"
+              searchPlaceholder="Buscar investidor..."
+              className="w-[260px]"
+            />
             <Input type="month" value={mes} onChange={(e) => setMes(e.target.value)} className="w-[160px]" />
             <Button variant="outline" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" />Imprimir / PDF</Button>
           </div>

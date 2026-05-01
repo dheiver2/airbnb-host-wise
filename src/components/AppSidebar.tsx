@@ -15,7 +15,7 @@ const groups = [
   {
     label: "Visão geral",
     items: [
-      { title: "Dashboard", url: "/", icon: LayoutDashboard },
+      { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
     ],
   },
   {

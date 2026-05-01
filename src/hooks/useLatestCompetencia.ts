@@ -9,19 +9,19 @@ let inflight: Promise<string | null> | null = null;
 async function fetchLatest(): Promise<string | null> {
   if (cachedMes) return cachedMes;
   if (!inflight) {
-    inflight = supabase
-      .from("reservas")
-      .select("mes_competencia")
-      .order("mes_competencia", { ascending: false })
-      .limit(1)
-      .then(({ data }) => {
-        const mc = data?.[0]?.mes_competencia as string | undefined;
-        if (mc) {
-          cachedMes = mc.slice(0, 7);
-          try { sessionStorage.setItem("latest_competencia", cachedMes); } catch {}
-        }
-        return cachedMes;
-      });
+    inflight = (async () => {
+      const { data } = await supabase
+        .from("reservas")
+        .select("mes_competencia")
+        .order("mes_competencia", { ascending: false })
+        .limit(1);
+      const mc = data?.[0]?.mes_competencia as string | undefined;
+      if (mc) {
+        cachedMes = mc.slice(0, 7);
+        try { sessionStorage.setItem("latest_competencia", cachedMes); } catch {}
+      }
+      return cachedMes;
+    })();
   }
   return inflight;
 }

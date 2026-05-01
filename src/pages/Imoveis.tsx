@@ -23,6 +23,8 @@ export default function Imoveis() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [search, setSearch] = useState("");
+  const [searchParams] = useSearchParams();
+  const [invFiltro, setInvFiltro] = useState(searchParams.get("investidor") ?? "");
 
   useEffect(() => { load(); }, []);
 

@@ -82,11 +82,11 @@ export default function Hospedagens() {
               placeholder="Todos os imóveis"
               searchPlaceholder="Filtrar imóvel..."
               clearable
-              className="min-w-[220px] flex-1 lg:flex-none"
+              className="min-w-[220px] sm:flex-1 lg:flex-none"
             />
             <MonthPicker value={mes} onChange={setMes} />
             <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setForm({}); }}>
-              <DialogTrigger asChild><Button className="flex-1 lg:flex-none"><Plus className="mr-2 h-4 w-4" />Nova hospedagem</Button></DialogTrigger>
+              <DialogTrigger asChild><Button className="w-full sm:flex-1 lg:w-auto lg:flex-none"><Plus className="mr-2 h-4 w-4" />Nova hospedagem</Button></DialogTrigger>
               <DialogContent className="max-w-lg">
                 <DialogHeader><DialogTitle>Nova hospedagem</DialogTitle></DialogHeader>
                 <div className="grid gap-3 sm:grid-cols-2">

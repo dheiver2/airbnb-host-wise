@@ -65,10 +65,10 @@ export default function Manutencoes() {
         title="Manutenções"
         description="Reparos e investimentos no imóvel — defina quem absorve o custo."
         actions={
-          <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto">
+          <div className="contents sm:flex sm:w-full sm:flex-wrap sm:items-center sm:gap-2 lg:w-auto">
             <MonthPicker value={mes} onChange={setMes} />
             <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setForm({ rateio: "investidor" }); }}>
-              <DialogTrigger asChild><Button className="flex-1 lg:flex-none"><Plus className="mr-2 h-4 w-4" />Nova manutenção</Button></DialogTrigger>
+              <DialogTrigger asChild><Button className="w-full sm:flex-1 lg:w-auto lg:flex-none"><Plus className="mr-2 h-4 w-4" />Nova manutenção</Button></DialogTrigger>
               <DialogContent className="max-w-lg">
                 <DialogHeader><DialogTitle>Nova manutenção</DialogTitle></DialogHeader>
                 <div className="grid gap-3 sm:grid-cols-2">

@@ -12,6 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { brl } from "@/lib/format";
+import { Combobox } from "@/components/Combobox";
+import { Link, useSearchParams } from "react-router-dom";
 
 const TIPOS = ["studio", "1Q", "2Q", "3Q", "cobertura"] as const;
 

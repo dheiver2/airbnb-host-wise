@@ -96,8 +96,8 @@ export default function Servicos() {
         }
       />
       <div className="p-6">
-        <Card className="shadow-card"><CardContent className="p-0">
-          <Table>
+        <Card className="shadow-card"><CardContent className="overflow-x-auto p-0">
+          <Table className="min-w-[760px]">
             <TableHeader><TableRow>
               <TableHead>Data</TableHead><TableHead>Imóvel</TableHead><TableHead>Tipo</TableHead>
               <TableHead>Prestador</TableHead><TableHead>Custo</TableHead><TableHead>Cobrado</TableHead>

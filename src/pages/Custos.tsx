@@ -83,8 +83,8 @@ export default function Custos() {
       />
       <div className="p-6 space-y-4">
         <div className="text-sm text-muted-foreground">Total no mês: <span className="num font-semibold text-foreground">{brl(total)}</span></div>
-        <Card className="shadow-card"><CardContent className="p-0">
-          <Table>
+        <Card className="shadow-card"><CardContent className="overflow-x-auto p-0">
+          <Table className="min-w-[760px]">
             <TableHeader><TableRow>
               <TableHead>Categoria</TableHead><TableHead>Descrição</TableHead><TableHead>Valor</TableHead><TableHead></TableHead>
             </TableRow></TableHeader>

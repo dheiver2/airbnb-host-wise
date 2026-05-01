@@ -129,8 +129,8 @@ export default function Hospedagens() {
             <div className="num mt-1 text-xl font-semibold">{brl(liquido)}</div>
           </CardContent></Card>
         </div>
-        <Card className="shadow-card"><CardContent className="p-0">
-          <Table>
+        <Card className="shadow-card"><CardContent className="overflow-x-auto p-0">
+          <Table className="min-w-[760px]">
             <TableHeader><TableRow>
               <TableHead>Imóvel</TableHead><TableHead>Check-in</TableHead><TableHead>Check-out</TableHead>
               <TableHead>Noites</TableHead><TableHead>Hósp.</TableHead><TableHead>Bruto</TableHead>

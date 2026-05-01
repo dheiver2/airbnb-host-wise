@@ -140,48 +140,52 @@ export default function DREInvestidor() {
           </Card>
         )}
 
-        <Card className="shadow-card">
-          <CardHeader><CardTitle className="text-base">Demonstrativo de Resultado</CardTitle></CardHeader>
-          <CardContent className="p-0">
-            <ul className="divide-y divide-border">
-              {linhas.map((l) => (
-                <li key={l.label} className={`flex items-center justify-between px-5 py-3 ${l.tipo === "total" ? "bg-muted/60 font-semibold" : l.tipo === "subtotal" ? "bg-muted/30 font-medium" : ""}`}>
-                  <span className={l.tipo === "total" ? "text-base" : "text-sm"}>{l.label}</span>
-                  <span className={`num ${l.tipo === "total" ? "text-lg" : "text-sm"} ${l.valor < 0 ? "text-destructive" : l.tipo === "total" || l.tipo === "subtotal" ? "text-foreground" : "text-foreground"}`}>{brl(l.valor)}</span>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
+        {investidor && imoveis.length > 0 && (
+          <>
+            <Card className="shadow-card">
+              <CardHeader><CardTitle className="text-base">Demonstrativo de Resultado</CardTitle></CardHeader>
+              <CardContent className="p-0">
+                <ul className="divide-y divide-border">
+                  {linhas.map((l) => (
+                    <li key={l.label} className={`flex items-center justify-between px-5 py-3 ${l.tipo === "total" ? "bg-muted/60 font-semibold" : l.tipo === "subtotal" ? "bg-muted/30 font-medium" : ""}`}>
+                      <span className={l.tipo === "total" ? "text-base" : "text-sm"}>{l.label}</span>
+                      <span className={`num ${l.tipo === "total" ? "text-lg" : "text-sm"} ${l.valor < 0 ? "text-destructive" : "text-foreground"}`}>{brl(l.valor)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
 
-        {imoveis.length > 1 && (
-          <Card className="shadow-card">
-            <CardHeader><CardTitle className="text-base">Drill-down por imóvel</CardTitle></CardHeader>
-            <CardContent className="p-0 overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                  <tr><th className="px-4 py-2">Imóvel</th><th className="px-4 py-2">Faturamento</th><th className="px-4 py-2">Comissão</th><th className="px-4 py-2">Faxina</th><th className="px-4 py-2">Lavand.</th><th className="px-4 py-2">Material</th><th className="px-4 py-2">Manut.</th><th className="px-4 py-2">Líquido</th></tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {calc.porImovel.map((p) => {
-                    const liq = p.faturamento - p.comissao - p.despFaxina - p.despLav - p.despMat - p.manutencao;
-                    return (
-                      <tr key={p.im.id}>
-                        <td className="px-4 py-2 font-medium">{p.im.codigo}</td>
-                        <td className="px-4 py-2 num">{brl(p.faturamento)}</td>
-                        <td className="px-4 py-2 num text-muted-foreground">{brl(p.comissao)}</td>
-                        <td className="px-4 py-2 num text-muted-foreground">{brl(p.despFaxina)}</td>
-                        <td className="px-4 py-2 num text-muted-foreground">{brl(p.despLav)}</td>
-                        <td className="px-4 py-2 num text-muted-foreground">{brl(p.despMat)}</td>
-                        <td className="px-4 py-2 num text-muted-foreground">{brl(p.manutencao)}</td>
-                        <td className="px-4 py-2 num font-semibold">{brl(liq)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </CardContent>
-          </Card>
+            {imoveis.length > 1 && (
+              <Card className="shadow-card">
+                <CardHeader><CardTitle className="text-base">Drill-down por imóvel</CardTitle></CardHeader>
+                <CardContent className="p-0 overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                      <tr><th className="px-4 py-2">Imóvel</th><th className="px-4 py-2">Faturamento</th><th className="px-4 py-2">Comissão</th><th className="px-4 py-2">Faxina</th><th className="px-4 py-2">Lavand.</th><th className="px-4 py-2">Material</th><th className="px-4 py-2">Manut.</th><th className="px-4 py-2">Líquido</th></tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {calc.porImovel.map((p) => {
+                        const liq = p.faturamento - p.comissao - p.despFaxina - p.despLav - p.despMat - p.manutencao;
+                        return (
+                          <tr key={p.im.id}>
+                            <td className="px-4 py-2 font-medium">{p.im.codigo}</td>
+                            <td className="px-4 py-2 num">{brl(p.faturamento)}</td>
+                            <td className="px-4 py-2 num text-muted-foreground">{brl(p.comissao)}</td>
+                            <td className="px-4 py-2 num text-muted-foreground">{brl(p.despFaxina)}</td>
+                            <td className="px-4 py-2 num text-muted-foreground">{brl(p.despLav)}</td>
+                            <td className="px-4 py-2 num text-muted-foreground">{brl(p.despMat)}</td>
+                            <td className="px-4 py-2 num text-muted-foreground">{brl(p.manutencao)}</td>
+                            <td className="px-4 py-2 num font-semibold">{brl(liq)}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </CardContent>
+              </Card>
+            )}
+          </>
         )}
       </div>
     </>

@@ -75,10 +75,13 @@ export default function Imoveis() {
                 <div className="space-y-1.5"><Label>Código *</Label><Input value={editing?.codigo ?? ""} onChange={(e) => setEditing({ ...editing, codigo: e.target.value })} /></div>
                 <div className="space-y-1.5">
                   <Label>Investidor *</Label>
-                  <Select value={editing?.investidor_id ?? ""} onValueChange={(v) => setEditing({ ...editing, investidor_id: v })}>
-                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                    <SelectContent>{investidores.map((i) => <SelectItem key={i.id} value={i.id}>{i.nome}</SelectItem>)}</SelectContent>
-                  </Select>
+                  <Combobox
+                    options={investidores.map((i) => ({ value: i.id, label: i.nome }))}
+                    value={editing?.investidor_id ?? ""}
+                    onChange={(v) => setEditing({ ...editing, investidor_id: v })}
+                    placeholder="Selecione"
+                    searchPlaceholder="Buscar investidor..."
+                  />
                 </div>
                 <div className="space-y-1.5 sm:col-span-2"><Label>Endereço *</Label><Input value={editing?.endereco ?? ""} onChange={(e) => setEditing({ ...editing, endereco: e.target.value })} /></div>
                 <div className="space-y-1.5">

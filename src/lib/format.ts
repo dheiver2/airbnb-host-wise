@@ -20,6 +20,16 @@ export const monthInputValue = (d: Date = new Date()) =>
 
 export const monthCompetencia = (yyyymm: string) => `${yyyymm}-01`;
 
+export const monthDate = (yyyymm: string) => {
+  const [y, m] = yyyymm.split("-").map(Number);
+  return new Date(y, (m || 1) - 1, 1);
+};
+
+export const daysInMonth = (yyyymm: string) => {
+  const [y, m] = yyyymm.split("-").map(Number);
+  return new Date(y, m, 0).getDate();
+};
+
 export const monthRange = (yyyymm: string) => {
   const [y, m] = yyyymm.split("-").map(Number);
   const start = new Date(y, m - 1, 1);

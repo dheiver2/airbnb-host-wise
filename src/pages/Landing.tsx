@@ -59,7 +59,7 @@ export default function Landing() {
             </span>
             <h1 className="text-4xl md:text-6xl font-bold tracking-tight leading-[1.05]">
               Sua operação Airbnb,{" "}
-              <span className="bg-gradient-brand bg-clip-text text-transparent">com clareza absoluta</span>
+              <span className="text-gradient-brand">com clareza absoluta</span>
             </h1>
             <p className="text-lg text-muted-foreground max-w-xl">
               Centralize hospedagens, custos, manutenções e adiantamentos. Gere DREs por investidor e
@@ -111,7 +111,7 @@ export default function Landing() {
         <div className="container mx-auto px-4 py-10 grid grid-cols-1 sm:grid-cols-3 gap-8">
           {stats.map((s) => (
             <div key={s.l} className="text-center">
-              <div className="text-3xl md:text-4xl font-bold bg-gradient-brand bg-clip-text text-transparent">{s.v}</div>
+              <div className="text-3xl md:text-4xl font-bold text-gradient-brand">{s.v}</div>
               <div className="mt-1 text-sm text-muted-foreground">{s.l}</div>
             </div>
           ))}

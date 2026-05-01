@@ -119,7 +119,19 @@ export default function Imoveis() {
         }
       />
       <div className="space-y-4 p-6">
-        <Input placeholder="Buscar por código ou endereço..." value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />
+        <div className="flex flex-wrap items-center gap-2">
+          <Input placeholder="Buscar por código ou endereço..." value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />
+          <Combobox
+            options={investidores.map((i) => ({ value: i.id, label: i.nome }))}
+            value={invFiltro}
+            onChange={setInvFiltro}
+            placeholder="Todos investidores"
+            searchPlaceholder="Filtrar investidor..."
+            clearable
+            className="w-[220px]"
+          />
+          <div className="text-xs text-muted-foreground ml-auto">{filtered.length} de {list.length} imóveis</div>
+        </div>
         <Card className="shadow-card">
           <CardContent className="p-0">
             <Table>

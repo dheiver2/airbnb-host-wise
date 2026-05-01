@@ -78,7 +78,7 @@ export default function Dashboard() {
         actions={
           <div className="flex items-center gap-2">
             <Label htmlFor="mes" className="text-sm">Mês</Label>
-            <Input id="mes" type="month" value={mes} onChange={(e) => setMes(e.target.value)} className="w-[160px]" />
+            <MonthPicker id="mes" value={mes} onChange={setMes} />
           </div>
         }
       />

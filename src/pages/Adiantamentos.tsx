@@ -79,7 +79,7 @@ export default function Adiantamentos() {
               clearable
               className="w-[220px]"
             />
-            <Input type="month" value={mes} onChange={(e) => setMes(e.target.value)} className="w-[160px]" />
+            <MonthPicker value={mes} onChange={setMes} />
             <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setForm({ origem: "empresa_repasse" }); }}>
               <DialogTrigger asChild><Button><Plus className="mr-2 h-4 w-4" />Novo adiantamento</Button></DialogTrigger>
               <DialogContent>

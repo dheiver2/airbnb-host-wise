@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
+import { MonthPicker } from "@/components/MonthPicker";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { brl, monthRange, monthInputValue } from "@/lib/format";
 import { useCompetenciaState } from "@/hooks/useLatestCompetencia";

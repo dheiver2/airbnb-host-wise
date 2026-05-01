@@ -1,3 +1,3 @@
-import { Helmet } from "react-helmet";
-const X = () => null;
-export default X;
+// Não usado — rota "/" renderiza Dashboard via AppLayout
+const Index = () => null;
+export default Index;

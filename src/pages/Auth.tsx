@@ -19,7 +19,7 @@ export default function Auth() {
   const [password, setPassword] = useState("");
   const [nome, setNome] = useState("");
 
-  useEffect(() => { if (user) navigate("/", { replace: true }); }, [user, navigate]);
+  useEffect(() => { if (user) navigate("/dashboard", { replace: true }); }, [user, navigate]);
 
   const signIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,7 +27,7 @@ export default function Auth() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) toast.error(error.message);
-    else { toast.success("Bem-vindo!"); navigate("/", { replace: true }); }
+    else { toast.success("Bem-vindo!"); navigate("/dashboard", { replace: true }); }
   };
 
   const signUp = async (e: React.FormEvent) => {

@@ -2,34 +2,46 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { monthInputValue } from "@/lib/format";
 
+let cachedMes: string | null =
+  typeof window !== "undefined" ? sessionStorage.getItem("latest_competencia") : null;
+let inflight: Promise<string | null> | null = null;
+
+async function fetchLatest(): Promise<string | null> {
+  if (cachedMes) return cachedMes;
+  if (!inflight) {
+    inflight = supabase
+      .from("reservas")
+      .select("mes_competencia")
+      .order("mes_competencia", { ascending: false })
+      .limit(1)
+      .then(({ data }) => {
+        const mc = data?.[0]?.mes_competencia as string | undefined;
+        if (mc) {
+          cachedMes = mc.slice(0, 7);
+          try { sessionStorage.setItem("latest_competencia", cachedMes); } catch {}
+        }
+        return cachedMes;
+      });
+  }
+  return inflight;
+}
+
 /**
- * Returns the YYYY-MM of the most recent month that has reservations.
- * Falls back to the current month while loading or if no data exists.
- * Cached in sessionStorage to avoid extra queries during navigation.
+ * Returns [mes, setMes]. Initial value is the most recent month with reservations
+ * (cached across navigation). Falls back to current month while loading.
  */
-export function useLatestCompetencia(): string {
-  const cached = typeof window !== "undefined" ? sessionStorage.getItem("latest_competencia") : null;
-  const [mes, setMes] = useState<string>(cached || monthInputValue());
+export function useCompetenciaState(): [string, (m: string) => void] {
+  const [mes, setMes] = useState<string>(cachedMes || monthInputValue());
+  const [touched, setTouched] = useState(false);
 
   useEffect(() => {
-    if (cached) return;
+    if (touched || cachedMes) return;
     let cancelled = false;
-    (async () => {
-      const { data } = await supabase
-        .from("reservas")
-        .select("mes_competencia")
-        .order("mes_competencia", { ascending: false })
-        .limit(1);
-      if (cancelled) return;
-      const mc = data?.[0]?.mes_competencia as string | undefined;
-      if (mc) {
-        const value = mc.slice(0, 7);
-        sessionStorage.setItem("latest_competencia", value);
-        setMes(value);
-      }
-    })();
+    fetchLatest().then((v) => {
+      if (!cancelled && v && !touched) setMes(v);
+    });
     return () => { cancelled = true; };
-  }, [cached]);
+  }, [touched]);
 
-  return mes;
+  return [mes, (m: string) => { setTouched(true); setMes(m); }];
 }

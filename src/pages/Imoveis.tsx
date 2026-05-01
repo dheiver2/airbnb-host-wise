@@ -57,7 +57,9 @@ export default function Imoveis() {
     if (error) toast.error(error.message); else { toast.success("Excluído"); load(); }
   }
 
-  const filtered = list.filter((i) => i.codigo.toLowerCase().includes(search.toLowerCase()) || i.endereco.toLowerCase().includes(search.toLowerCase()));
+  const filtered = list
+    .filter((i) => !invFiltro || i.investidor_id === invFiltro)
+    .filter((i) => i.codigo.toLowerCase().includes(search.toLowerCase()) || i.endereco.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <>

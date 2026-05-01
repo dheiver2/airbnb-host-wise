@@ -1,7 +1,7 @@
 import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, Building2, Settings2, CalendarRange,
-  Wrench, Wallet, FileBarChart, Upload, Receipt, LogOut, Building
+  Wrench, Wallet, FileBarChart, Upload, Receipt, LogOut
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import sa7dLogo from "@/assets/sa7d-logo.png";
 
 const groups = [
   {
@@ -56,13 +57,13 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border">
-        <div className="flex items-center gap-2 px-2 py-3">
-          <div className="grid h-9 w-9 place-items-center rounded-md bg-sidebar-accent text-sidebar-accent-foreground">
-            <Building className="h-5 w-5" />
+        <div className="flex items-center gap-2.5 px-2 py-3">
+          <div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-md bg-gradient-brand shadow-brand">
+            <img src={sa7dLogo} alt="SA7D" className="h-9 w-9 object-cover" />
           </div>
           {!collapsed && (
             <div className="leading-tight">
-              <div className="text-sm font-semibold text-sidebar-foreground">Hostly</div>
+              <div className="text-sm font-semibold tracking-wide text-sidebar-foreground">SA7D</div>
               <div className="text-xs text-sidebar-foreground/60">Gestão financeira</div>
             </div>
           )}

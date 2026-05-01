@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Building, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import sa7dLogo from "@/assets/sa7d-logo.png";
 
 export default function Auth() {
   const { user } = useAuth();
@@ -45,12 +46,12 @@ export default function Auth() {
   return (
     <div className="grid min-h-screen place-items-center bg-gradient-subtle px-4">
       <div className="w-full max-w-md">
-        <div className="mb-6 flex items-center justify-center gap-2">
-          <div className="grid h-10 w-10 place-items-center rounded-md bg-gradient-primary text-primary-foreground">
-            <Building className="h-5 w-5" />
+        <div className="mb-8 flex flex-col items-center gap-3 text-center">
+          <div className="grid h-16 w-16 place-items-center overflow-hidden rounded-2xl bg-gradient-brand shadow-brand">
+            <img src={sa7dLogo} alt="SA7D" className="h-16 w-16 object-cover" />
           </div>
           <div>
-            <div className="text-lg font-semibold">Hostly</div>
+            <div className="text-2xl font-semibold tracking-wide">SA7D</div>
             <div className="text-xs text-muted-foreground">Gestão financeira de imóveis</div>
           </div>
         </div>

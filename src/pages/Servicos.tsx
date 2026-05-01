@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { brl, dateBR, monthInputValue, monthRange } from "@/lib/format";
-import { useLatestCompetencia } from "@/hooks/useLatestCompetencia";
+import { useCompetenciaState } from "@/hooks/useLatestCompetencia";
 
 const TIPOS = ["faxina", "lavanderia", "material", "manutencao"] as const;
 
@@ -19,7 +19,7 @@ export default function Servicos() {
   const [list, setList] = useState<any[]>([]);
   const [imoveis, setImoveis] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
-  const [mes, setMes] = useState(useLatestCompetencia());
+  const [mes, setMes] = useCompetenciaState();
   const [form, setForm] = useState<any>({});
 
   useEffect(() => { supabase.from("imoveis").select("id, codigo, valor_faxina, custo_faxina, valor_lavanderia, custo_lavanderia").eq("status", "ativo").order("codigo").then(({ data }) => setImoveis(data ?? [])); }, []);

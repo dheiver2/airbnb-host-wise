@@ -3,14 +3,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { brl, monthRange, monthInputValue } from "@/lib/format";
-import { useLatestCompetencia } from "@/hooks/useLatestCompetencia";
+import { useCompetenciaState } from "@/hooks/useLatestCompetencia";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Building2, TrendingUp, Wallet, BarChart3 } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 
 export default function Dashboard() {
-  const [mes, setMes] = useState(useLatestCompetencia());
+  const [mes, setMes] = useCompetenciaState();
   const [stats, setStats] = useState({ faturamento: 0, liquido: 0, imoveis: 0, ocupacao: 0 });
   const [evolucao, setEvolucao] = useState<{ mes: string; valor: number }[]>([]);
   const [topImoveis, setTopImoveis] = useState<{ codigo: string; valor: number }[]>([]);

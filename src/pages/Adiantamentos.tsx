@@ -12,14 +12,14 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { brl, dateBR, monthInputValue, monthRange } from "@/lib/format";
-import { useLatestCompetencia } from "@/hooks/useLatestCompetencia";
+import { useCompetenciaState } from "@/hooks/useLatestCompetencia";
 
 export default function Adiantamentos() {
   const [list, setList] = useState<any[]>([]);
   const [investidores, setInvestidores] = useState<any[]>([]);
   const [imoveis, setImoveis] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
-  const [mes, setMes] = useState(useLatestCompetencia());
+  const [mes, setMes] = useCompetenciaState();
   const [form, setForm] = useState<any>({ origem: "empresa_repasse" });
 
   useEffect(() => {

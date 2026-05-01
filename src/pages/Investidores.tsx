@@ -8,9 +8,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Building2 } from "lucide-react";
 import { toast } from "sonner";
 import { dateBR } from "@/lib/format";
+import { Link } from "react-router-dom";
 
 interface Inv { id: string; nome: string; documento: string | null; email: string | null; telefone: string | null; pix: string | null; status: string; created_at: string; }
 

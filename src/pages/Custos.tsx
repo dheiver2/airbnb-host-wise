@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { brl, monthInputValue, monthRange } from "@/lib/format";
+import { useCompetenciaState } from "@/hooks/useLatestCompetencia";
 
 const CATEGORIAS = ["gestao", "logistica", "chat", "escritorio", "folha", "diversos", "itens_apartamento"];
 const LABELS: Record<string, string> = {
@@ -22,7 +23,7 @@ const LABELS: Record<string, string> = {
 export default function Custos() {
   const [list, setList] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
-  const [mes, setMes] = useState(monthInputValue());
+  const [mes, setMes] = useCompetenciaState();
   const [form, setForm] = useState<any>({});
 
   useEffect(() => { load(); }, [mes]);

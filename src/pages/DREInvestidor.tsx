@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { brl, monthInputValue, monthRange, monthBR } from "@/lib/format";
+import { useCompetenciaState } from "@/hooks/useLatestCompetencia";
 import { Printer } from "lucide-react";
 
 interface Linha { label: string; valor: number; tipo?: "receita" | "despesa" | "total" | "subtotal"; }
@@ -15,7 +16,7 @@ interface Linha { label: string; valor: number; tipo?: "receita" | "despesa" | "
 export default function DREInvestidor() {
   const [investidores, setInvestidores] = useState<any[]>([]);
   const [investidorId, setInvestidorId] = useState<string>("");
-  const [mes, setMes] = useState(monthInputValue());
+  const [mes, setMes] = useCompetenciaState();
   const [imoveis, setImoveis] = useState<any[]>([]);
   const [reservas, setReservas] = useState<any[]>([]);
   const [servicos, setServicos] = useState<any[]>([]);

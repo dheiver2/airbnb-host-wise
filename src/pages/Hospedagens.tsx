@@ -11,12 +11,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { brl, dateBR, monthInputValue, monthRange } from "@/lib/format";
+import { useCompetenciaState } from "@/hooks/useLatestCompetencia";
 
 export default function Hospedagens() {
   const [list, setList] = useState<any[]>([]);
   const [imoveis, setImoveis] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
-  const [mes, setMes] = useState(monthInputValue());
+  const [mes, setMes] = useCompetenciaState();
   const [form, setForm] = useState<any>({});
 
   useEffect(() => { loadImoveis(); }, []);

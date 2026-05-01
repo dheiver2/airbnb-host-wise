@@ -58,10 +58,10 @@ export default function Custos() {
         title="Custos da empresa"
         description="Custos fixos e folha de pagamento — entram apenas no DRE da empresa."
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto">
             <MonthPicker value={mes} onChange={setMes} />
             <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setForm({}); }}>
-              <DialogTrigger asChild><Button><Plus className="mr-2 h-4 w-4" />Novo custo</Button></DialogTrigger>
+              <DialogTrigger asChild><Button className="flex-1 lg:flex-none"><Plus className="mr-2 h-4 w-4" />Novo custo</Button></DialogTrigger>
               <DialogContent>
                 <DialogHeader><DialogTitle>Novo custo do mês</DialogTitle></DialogHeader>
                 <div className="grid gap-3">

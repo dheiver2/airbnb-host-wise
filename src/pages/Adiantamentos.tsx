@@ -77,11 +77,11 @@ export default function Adiantamentos() {
               placeholder="Todos investidores"
               searchPlaceholder="Filtrar investidor..."
               clearable
-              className="w-[220px]"
+              className="min-w-[220px] flex-1 lg:flex-none"
             />
             <MonthPicker value={mes} onChange={setMes} />
             <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setForm({ origem: "empresa_repasse" }); }}>
-              <DialogTrigger asChild><Button><Plus className="mr-2 h-4 w-4" />Novo adiantamento</Button></DialogTrigger>
+              <DialogTrigger asChild><Button className="flex-1 lg:flex-none"><Plus className="mr-2 h-4 w-4" />Novo adiantamento</Button></DialogTrigger>
               <DialogContent>
                 <DialogHeader><DialogTitle>Novo adiantamento</DialogTitle></DialogHeader>
                 <div className="grid gap-3 sm:grid-cols-2">

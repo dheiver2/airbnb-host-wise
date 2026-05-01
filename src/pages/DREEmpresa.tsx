@@ -87,7 +87,7 @@ export default function DREEmpresa() {
         title="DRE da Empresa"
         description="Visão consolidada — receitas, custos e margem."
         actions={
-          <div className="flex items-center gap-2 print:hidden">
+          <div className="flex w-full flex-wrap items-center gap-2 print:hidden lg:w-auto">
             <MonthPicker value={mes} onChange={setMes} />
             <Button variant="outline" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" />Imprimir / PDF</Button>
           </div>

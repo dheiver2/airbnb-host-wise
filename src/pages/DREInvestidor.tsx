@@ -91,14 +91,14 @@ export default function DREInvestidor() {
         title="DRE por Investidor"
         description="Demonstrativo mensal por proprietário."
         actions={
-          <div className="flex items-center gap-2 print:hidden">
+          <div className="flex w-full flex-wrap items-center gap-2 print:hidden lg:w-auto">
             <Combobox
               options={investidores.map((i) => ({ value: i.id, label: i.nome }))}
               value={investidorId}
               onChange={setInvestidorId}
               placeholder="Selecione o investidor"
               searchPlaceholder="Buscar investidor..."
-              className="w-[260px]"
+              className="min-w-[260px] flex-1 lg:flex-none"
             />
             <MonthPicker value={mes} onChange={setMes} />
             <Button variant="outline" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" />Imprimir / PDF</Button>

@@ -40,7 +40,7 @@ export function MonthPicker({ value, onChange, className, id }: MonthPickerProps
         <Button
           id={id}
           variant="outline"
-          className={cn("w-[180px] justify-start text-left font-normal", className)}
+          className={cn("min-w-[172px] justify-start text-left font-normal", className)}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
           <span className="truncate">{label}</span>

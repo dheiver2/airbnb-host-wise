@@ -14,16 +14,487 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      adiantamentos: {
+        Row: {
+          created_at: string
+          data: string
+          id: string
+          imovel_id: string | null
+          investidor_id: string
+          mes_competencia: string
+          observacoes: string | null
+          origem: Database["public"]["Enums"]["origem_adiantamento"]
+          valor: number
+        }
+        Insert: {
+          created_at?: string
+          data: string
+          id?: string
+          imovel_id?: string | null
+          investidor_id: string
+          mes_competencia: string
+          observacoes?: string | null
+          origem?: Database["public"]["Enums"]["origem_adiantamento"]
+          valor: number
+        }
+        Update: {
+          created_at?: string
+          data?: string
+          id?: string
+          imovel_id?: string | null
+          investidor_id?: string
+          mes_competencia?: string
+          observacoes?: string | null
+          origem?: Database["public"]["Enums"]["origem_adiantamento"]
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "adiantamentos_imovel_id_fkey"
+            columns: ["imovel_id"]
+            isOneToOne: false
+            referencedRelation: "imoveis"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "adiantamentos_investidor_id_fkey"
+            columns: ["investidor_id"]
+            isOneToOne: false
+            referencedRelation: "investidores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      custos_fixos: {
+        Row: {
+          categoria: string
+          created_at: string
+          descricao: string | null
+          id: string
+          mes_competencia: string
+          valor: number
+        }
+        Insert: {
+          categoria: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          mes_competencia: string
+          valor: number
+        }
+        Update: {
+          categoria?: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          mes_competencia?: string
+          valor?: number
+        }
+        Relationships: []
+      }
+      imoveis: {
+        Row: {
+          capacidade: number
+          codigo: string
+          created_at: string
+          custo_faxina: number
+          custo_lavanderia: number
+          endereco: string
+          id: string
+          investidor_id: string
+          percentual_comissao: number
+          status: Database["public"]["Enums"]["status_geral"]
+          tipo: Database["public"]["Enums"]["tipo_imovel"]
+          updated_at: string
+          valor_faxina: number
+          valor_lavanderia: number
+        }
+        Insert: {
+          capacidade?: number
+          codigo: string
+          created_at?: string
+          custo_faxina?: number
+          custo_lavanderia?: number
+          endereco: string
+          id?: string
+          investidor_id: string
+          percentual_comissao?: number
+          status?: Database["public"]["Enums"]["status_geral"]
+          tipo?: Database["public"]["Enums"]["tipo_imovel"]
+          updated_at?: string
+          valor_faxina?: number
+          valor_lavanderia?: number
+        }
+        Update: {
+          capacidade?: number
+          codigo?: string
+          created_at?: string
+          custo_faxina?: number
+          custo_lavanderia?: number
+          endereco?: string
+          id?: string
+          investidor_id?: string
+          percentual_comissao?: number
+          status?: Database["public"]["Enums"]["status_geral"]
+          tipo?: Database["public"]["Enums"]["tipo_imovel"]
+          updated_at?: string
+          valor_faxina?: number
+          valor_lavanderia?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "imoveis_investidor_id_fkey"
+            columns: ["investidor_id"]
+            isOneToOne: false
+            referencedRelation: "investidores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      importacoes_airbnb: {
+        Row: {
+          arquivo: string | null
+          created_at: string
+          duplicados: number
+          erros: number
+          id: string
+          inseridos: number
+          tipo: string
+          total_linhas: number
+          user_id: string | null
+        }
+        Insert: {
+          arquivo?: string | null
+          created_at?: string
+          duplicados?: number
+          erros?: number
+          id?: string
+          inseridos?: number
+          tipo: string
+          total_linhas?: number
+          user_id?: string | null
+        }
+        Update: {
+          arquivo?: string | null
+          created_at?: string
+          duplicados?: number
+          erros?: number
+          id?: string
+          inseridos?: number
+          tipo?: string
+          total_linhas?: number
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      investidores: {
+        Row: {
+          created_at: string
+          documento: string | null
+          email: string | null
+          id: string
+          nome: string
+          observacoes: string | null
+          pix: string | null
+          status: Database["public"]["Enums"]["status_geral"]
+          telefone: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          documento?: string | null
+          email?: string | null
+          id?: string
+          nome: string
+          observacoes?: string | null
+          pix?: string | null
+          status?: Database["public"]["Enums"]["status_geral"]
+          telefone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          documento?: string | null
+          email?: string | null
+          id?: string
+          nome?: string
+          observacoes?: string | null
+          pix?: string | null
+          status?: Database["public"]["Enums"]["status_geral"]
+          telefone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      manutencoes: {
+        Row: {
+          categoria: string | null
+          created_at: string
+          custo: number
+          data: string
+          descricao: string
+          id: string
+          imovel_id: string
+          mes_competencia: string
+          parametro_id: string | null
+          rateio: Database["public"]["Enums"]["rateio_manutencao"]
+          status: string
+          valor_cobrado: number
+        }
+        Insert: {
+          categoria?: string | null
+          created_at?: string
+          custo?: number
+          data: string
+          descricao: string
+          id?: string
+          imovel_id: string
+          mes_competencia: string
+          parametro_id?: string | null
+          rateio?: Database["public"]["Enums"]["rateio_manutencao"]
+          status?: string
+          valor_cobrado?: number
+        }
+        Update: {
+          categoria?: string | null
+          created_at?: string
+          custo?: number
+          data?: string
+          descricao?: string
+          id?: string
+          imovel_id?: string
+          mes_competencia?: string
+          parametro_id?: string | null
+          rateio?: Database["public"]["Enums"]["rateio_manutencao"]
+          status?: string
+          valor_cobrado?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manutencoes_imovel_id_fkey"
+            columns: ["imovel_id"]
+            isOneToOne: false
+            referencedRelation: "imoveis"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manutencoes_parametro_id_fkey"
+            columns: ["parametro_id"]
+            isOneToOne: false
+            referencedRelation: "parametros_servico"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      parametros_servico: {
+        Row: {
+          ativo: boolean
+          categoria: string | null
+          created_at: string
+          custo: number
+          id: string
+          nome: string
+          updated_at: string
+          valor_cobrado: number
+        }
+        Insert: {
+          ativo?: boolean
+          categoria?: string | null
+          created_at?: string
+          custo?: number
+          id?: string
+          nome: string
+          updated_at?: string
+          valor_cobrado?: number
+        }
+        Update: {
+          ativo?: boolean
+          categoria?: string | null
+          created_at?: string
+          custo?: number
+          id?: string
+          nome?: string
+          updated_at?: string
+          valor_cobrado?: number
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          nome: string | null
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id: string
+          nome?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          nome?: string | null
+        }
+        Relationships: []
+      }
+      reservas: {
+        Row: {
+          check_in: string
+          check_out: string
+          codigo_airbnb: string | null
+          created_at: string
+          hospedes: number
+          id: string
+          imovel_id: string
+          importacao_id: string | null
+          mes_competencia: string
+          taxas_airbnb: number
+          updated_at: string
+          valor_bruto: number
+          valor_liquido: number
+        }
+        Insert: {
+          check_in: string
+          check_out: string
+          codigo_airbnb?: string | null
+          created_at?: string
+          hospedes?: number
+          id?: string
+          imovel_id: string
+          importacao_id?: string | null
+          mes_competencia: string
+          taxas_airbnb?: number
+          updated_at?: string
+          valor_bruto?: number
+          valor_liquido?: number
+        }
+        Update: {
+          check_in?: string
+          check_out?: string
+          codigo_airbnb?: string | null
+          created_at?: string
+          hospedes?: number
+          id?: string
+          imovel_id?: string
+          importacao_id?: string | null
+          mes_competencia?: string
+          taxas_airbnb?: number
+          updated_at?: string
+          valor_bruto?: number
+          valor_liquido?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reservas_imovel_id_fkey"
+            columns: ["imovel_id"]
+            isOneToOne: false
+            referencedRelation: "imoveis"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      servicos_operacionais: {
+        Row: {
+          created_at: string
+          custo_real: number
+          data: string
+          id: string
+          imovel_id: string
+          mes_competencia: string
+          observacoes: string | null
+          prestador: string | null
+          reserva_id: string | null
+          tipo: Database["public"]["Enums"]["tipo_servico_op"]
+          valor_cobrado: number
+        }
+        Insert: {
+          created_at?: string
+          custo_real?: number
+          data: string
+          id?: string
+          imovel_id: string
+          mes_competencia: string
+          observacoes?: string | null
+          prestador?: string | null
+          reserva_id?: string | null
+          tipo: Database["public"]["Enums"]["tipo_servico_op"]
+          valor_cobrado?: number
+        }
+        Update: {
+          created_at?: string
+          custo_real?: number
+          data?: string
+          id?: string
+          imovel_id?: string
+          mes_competencia?: string
+          observacoes?: string | null
+          prestador?: string | null
+          reserva_id?: string | null
+          tipo?: Database["public"]["Enums"]["tipo_servico_op"]
+          valor_cobrado?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "servicos_operacionais_imovel_id_fkey"
+            columns: ["imovel_id"]
+            isOneToOne: false
+            referencedRelation: "imoveis"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "servicos_operacionais_reserva_id_fkey"
+            columns: ["reserva_id"]
+            isOneToOne: false
+            referencedRelation: "reservas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_staff: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "operacional" | "investidor"
+      origem_adiantamento: "airbnb_direto" | "empresa_repasse"
+      rateio_manutencao: "investidor" | "empresa"
+      status_geral: "ativo" | "inativo" | "manutencao"
+      tipo_imovel: "studio" | "1Q" | "2Q" | "3Q" | "cobertura"
+      tipo_servico_op: "faxina" | "lavanderia" | "material" | "manutencao"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +621,13 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "operacional", "investidor"],
+      origem_adiantamento: ["airbnb_direto", "empresa_repasse"],
+      rateio_manutencao: ["investidor", "empresa"],
+      status_geral: ["ativo", "inativo", "manutencao"],
+      tipo_imovel: ["studio", "1Q", "2Q", "3Q", "cobertura"],
+      tipo_servico_op: ["faxina", "lavanderia", "material", "manutencao"],
+    },
   },
 } as const

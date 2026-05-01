@@ -96,7 +96,13 @@ export default function Investidores() {
                       <TableCell className="font-medium">{i.nome}</TableCell>
                       <TableCell className="text-muted-foreground">{i.documento ?? "—"}</TableCell>
                       <TableCell className="text-muted-foreground text-xs">{i.email}<br />{i.telefone}</TableCell>
-                      <TableCell className="num">{n}</TableCell>
+                      <TableCell className="num">
+                        {n > 0 ? (
+                          <Link to={`/imoveis?investidor=${i.id}`} className="inline-flex items-center gap-1 text-primary hover:underline">
+                            <Building2 className="h-3.5 w-3.5" />{n}
+                          </Link>
+                        ) : <span className="text-muted-foreground">0</span>}
+                      </TableCell>
                       <TableCell>{n <= 1 ? <Badge variant="secondary">Único imóvel</Badge> : <Badge>Múltiplos</Badge>}</TableCell>
                       <TableCell><Badge variant={i.status === "ativo" ? "default" : "secondary"}>{i.status}</Badge></TableCell>
                       <TableCell className="text-muted-foreground">{dateBR(i.created_at)}</TableCell>

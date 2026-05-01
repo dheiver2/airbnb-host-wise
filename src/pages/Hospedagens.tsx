@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -7,17 +7,18 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { brl, dateBR, monthInputValue, monthRange } from "@/lib/format";
+import { brl, dateBR, monthRange } from "@/lib/format";
 import { useCompetenciaState } from "@/hooks/useLatestCompetencia";
+import { Combobox } from "@/components/Combobox";
 
 export default function Hospedagens() {
   const [list, setList] = useState<any[]>([]);
   const [imoveis, setImoveis] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
   const [mes, setMes] = useCompetenciaState();
+  const [imovelFiltro, setImovelFiltro] = useState("");
   const [form, setForm] = useState<any>({});
 
   useEffect(() => { loadImoveis(); }, []);
@@ -57,7 +58,14 @@ export default function Hospedagens() {
     load();
   }
 
-  const total = list.reduce((s, r) => s + Number(r.valor_bruto || 0), 0);
+  const filtered = useMemo(
+    () => imovelFiltro ? list.filter((r) => r.imovel_id === imovelFiltro) : list,
+    [list, imovelFiltro],
+  );
+  const total = filtered.reduce((s, r) => s + Number(r.valor_bruto || 0), 0);
+  const liquido = filtered.reduce((s, r) => s + Number(r.valor_liquido || 0), 0);
+
+  const imovelOpts = imoveis.map((i) => ({ value: i.id, label: i.codigo, hint: i.endereco }));
 
   return (
     <>
@@ -65,7 +73,16 @@ export default function Hospedagens() {
         title="Hospedagens"
         description="Reservas/check-ins por mês de competência (data de check-out)."
         actions={
-          <div className="flex items-center gap-2">
+          <>
+            <Combobox
+              options={imovelOpts}
+              value={imovelFiltro}
+              onChange={setImovelFiltro}
+              placeholder="Todos os imóveis"
+              searchPlaceholder="Filtrar imóvel..."
+              clearable
+              className="w-[220px]"
+            />
             <Input type="month" value={mes} onChange={(e) => setMes(e.target.value)} className="w-[160px]" />
             <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setForm({}); }}>
               <DialogTrigger asChild><Button><Plus className="mr-2 h-4 w-4" />Nova hospedagem</Button></DialogTrigger>
@@ -74,10 +91,13 @@ export default function Hospedagens() {
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="space-y-1.5 sm:col-span-2">
                     <Label>Imóvel *</Label>
-                    <Select value={form.imovel_id ?? ""} onValueChange={(v) => setForm({ ...form, imovel_id: v })}>
-                      <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                      <SelectContent>{imoveis.map((i) => <SelectItem key={i.id} value={i.id}>{i.codigo} — {i.endereco}</SelectItem>)}</SelectContent>
-                    </Select>
+                    <Combobox
+                      options={imovelOpts}
+                      value={form.imovel_id ?? ""}
+                      onChange={(v) => setForm({ ...form, imovel_id: v })}
+                      placeholder="Selecione o imóvel"
+                      searchPlaceholder="Buscar imóvel..."
+                    />
                   </div>
                   <div className="space-y-1.5"><Label>Check-in *</Label><Input type="date" value={form.check_in ?? ""} onChange={(e) => setForm({ ...form, check_in: e.target.value })} /></div>
                   <div className="space-y-1.5"><Label>Check-out *</Label><Input type="date" value={form.check_out ?? ""} onChange={(e) => setForm({ ...form, check_out: e.target.value })} /></div>
@@ -90,11 +110,24 @@ export default function Hospedagens() {
                 <DialogFooter><Button onClick={save}>Salvar</Button></DialogFooter>
               </DialogContent>
             </Dialog>
-          </div>
+          </>
         }
       />
       <div className="p-6 space-y-4">
-        <div className="text-sm text-muted-foreground">Total no mês: <span className="num font-semibold text-foreground">{brl(total)}</span> · {list.length} reservas</div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Card className="shadow-card"><CardContent className="p-4">
+            <div className="text-xs uppercase tracking-wide text-muted-foreground">Reservas</div>
+            <div className="num mt-1 text-xl font-semibold">{filtered.length}</div>
+          </CardContent></Card>
+          <Card className="shadow-card"><CardContent className="p-4">
+            <div className="text-xs uppercase tracking-wide text-muted-foreground">Bruto</div>
+            <div className="num mt-1 text-xl font-semibold">{brl(total)}</div>
+          </CardContent></Card>
+          <Card className="shadow-card"><CardContent className="p-4">
+            <div className="text-xs uppercase tracking-wide text-muted-foreground">Líquido</div>
+            <div className="num mt-1 text-xl font-semibold">{brl(liquido)}</div>
+          </CardContent></Card>
+        </div>
         <Card className="shadow-card"><CardContent className="p-0">
           <Table>
             <TableHeader><TableRow>
@@ -103,8 +136,8 @@ export default function Hospedagens() {
               <TableHead>Taxas</TableHead><TableHead>Líquido</TableHead><TableHead>Cód.</TableHead><TableHead></TableHead>
             </TableRow></TableHeader>
             <TableBody>
-              {list.length === 0 && <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-8">Nenhuma reserva neste mês.</TableCell></TableRow>}
-              {list.map((r) => {
+              {filtered.length === 0 && <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-8">Nenhuma reserva neste mês.</TableCell></TableRow>}
+              {filtered.map((r) => {
                 const noites = Math.round((new Date(r.check_out).getTime() - new Date(r.check_in).getTime()) / 86400000);
                 return (
                   <TableRow key={r.id}>

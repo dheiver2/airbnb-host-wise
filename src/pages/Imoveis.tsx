@@ -12,6 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { brl } from "@/lib/format";
+import { Combobox } from "@/components/Combobox";
+import { Link, useSearchParams } from "react-router-dom";
 
 const TIPOS = ["studio", "1Q", "2Q", "3Q", "cobertura"] as const;
 
@@ -21,6 +23,8 @@ export default function Imoveis() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [search, setSearch] = useState("");
+  const [searchParams] = useSearchParams();
+  const [invFiltro, setInvFiltro] = useState(searchParams.get("investidor") ?? "");
 
   useEffect(() => { load(); }, []);
 
@@ -53,7 +57,9 @@ export default function Imoveis() {
     if (error) toast.error(error.message); else { toast.success("Excluído"); load(); }
   }
 
-  const filtered = list.filter((i) => i.codigo.toLowerCase().includes(search.toLowerCase()) || i.endereco.toLowerCase().includes(search.toLowerCase()));
+  const filtered = list
+    .filter((i) => !invFiltro || i.investidor_id === invFiltro)
+    .filter((i) => i.codigo.toLowerCase().includes(search.toLowerCase()) || i.endereco.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <>
@@ -73,10 +79,13 @@ export default function Imoveis() {
                 <div className="space-y-1.5"><Label>Código *</Label><Input value={editing?.codigo ?? ""} onChange={(e) => setEditing({ ...editing, codigo: e.target.value })} /></div>
                 <div className="space-y-1.5">
                   <Label>Investidor *</Label>
-                  <Select value={editing?.investidor_id ?? ""} onValueChange={(v) => setEditing({ ...editing, investidor_id: v })}>
-                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                    <SelectContent>{investidores.map((i) => <SelectItem key={i.id} value={i.id}>{i.nome}</SelectItem>)}</SelectContent>
-                  </Select>
+                  <Combobox
+                    options={investidores.map((i) => ({ value: i.id, label: i.nome }))}
+                    value={editing?.investidor_id ?? ""}
+                    onChange={(v) => setEditing({ ...editing, investidor_id: v })}
+                    placeholder="Selecione"
+                    searchPlaceholder="Buscar investidor..."
+                  />
                 </div>
                 <div className="space-y-1.5 sm:col-span-2"><Label>Endereço *</Label><Input value={editing?.endereco ?? ""} onChange={(e) => setEditing({ ...editing, endereco: e.target.value })} /></div>
                 <div className="space-y-1.5">
@@ -110,7 +119,19 @@ export default function Imoveis() {
         }
       />
       <div className="space-y-4 p-6">
-        <Input placeholder="Buscar por código ou endereço..." value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />
+        <div className="flex flex-wrap items-center gap-2">
+          <Input placeholder="Buscar por código ou endereço..." value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />
+          <Combobox
+            options={investidores.map((i) => ({ value: i.id, label: i.nome }))}
+            value={invFiltro}
+            onChange={setInvFiltro}
+            placeholder="Todos investidores"
+            searchPlaceholder="Filtrar investidor..."
+            clearable
+            className="w-[220px]"
+          />
+          <div className="text-xs text-muted-foreground ml-auto">{filtered.length} de {list.length} imóveis</div>
+        </div>
         <Card className="shadow-card">
           <CardContent className="p-0">
             <Table>

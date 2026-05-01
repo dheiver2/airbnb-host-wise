@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -11,8 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { brl, dateBR, monthInputValue, monthRange } from "@/lib/format";
+import { brl, dateBR, monthRange } from "@/lib/format";
 import { useCompetenciaState } from "@/hooks/useLatestCompetencia";
+import { Combobox } from "@/components/Combobox";
 
 export default function Adiantamentos() {
   const [list, setList] = useState<any[]>([]);
@@ -20,6 +21,7 @@ export default function Adiantamentos() {
   const [imoveis, setImoveis] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
   const [mes, setMes] = useCompetenciaState();
+  const [invFiltro, setInvFiltro] = useState("");
   const [form, setForm] = useState<any>({ origem: "empresa_repasse" });
 
   useEffect(() => {
@@ -51,7 +53,14 @@ export default function Adiantamentos() {
     await supabase.from("adiantamentos").delete().eq("id", id); load();
   }
 
-  const filteredImoveis = form.investidor_id ? imoveis.filter((i) => i.investidor_id === form.investidor_id) : imoveis;
+  const filteredImoveisForm = form.investidor_id ? imoveis.filter((i) => i.investidor_id === form.investidor_id) : imoveis;
+  const filtered = useMemo(
+    () => invFiltro ? list.filter((a) => a.investidor_id === invFiltro) : list,
+    [list, invFiltro],
+  );
+  const total = filtered.reduce((s, a) => s + Number(a.valor || 0), 0);
+
+  const invOpts = investidores.map((i) => ({ value: i.id, label: i.nome }));
 
   return (
     <>
@@ -59,7 +68,16 @@ export default function Adiantamentos() {
         title="Adiantamentos"
         description="Repasses pagos ao investidor (pelo Airbnb diretamente ou pela empresa)."
         actions={
-          <div className="flex items-center gap-2">
+          <>
+            <Combobox
+              options={invOpts}
+              value={invFiltro}
+              onChange={setInvFiltro}
+              placeholder="Todos investidores"
+              searchPlaceholder="Filtrar investidor..."
+              clearable
+              className="w-[220px]"
+            />
             <Input type="month" value={mes} onChange={(e) => setMes(e.target.value)} className="w-[160px]" />
             <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setForm({ origem: "empresa_repasse" }); }}>
               <DialogTrigger asChild><Button><Plus className="mr-2 h-4 w-4" />Novo adiantamento</Button></DialogTrigger>
@@ -68,17 +86,24 @@ export default function Adiantamentos() {
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="space-y-1.5 sm:col-span-2">
                     <Label>Investidor *</Label>
-                    <Select value={form.investidor_id ?? ""} onValueChange={(v) => setForm({ ...form, investidor_id: v, imovel_id: null })}>
-                      <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                      <SelectContent>{investidores.map((i) => <SelectItem key={i.id} value={i.id}>{i.nome}</SelectItem>)}</SelectContent>
-                    </Select>
+                    <Combobox
+                      options={invOpts}
+                      value={form.investidor_id ?? ""}
+                      onChange={(v) => setForm({ ...form, investidor_id: v, imovel_id: null })}
+                      placeholder="Selecione o investidor"
+                      searchPlaceholder="Buscar investidor..."
+                    />
                   </div>
                   <div className="space-y-1.5">
                     <Label>Imóvel</Label>
-                    <Select value={form.imovel_id ?? ""} onValueChange={(v) => setForm({ ...form, imovel_id: v })}>
-                      <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
-                      <SelectContent>{filteredImoveis.map((i) => <SelectItem key={i.id} value={i.id}>{i.codigo}</SelectItem>)}</SelectContent>
-                    </Select>
+                    <Combobox
+                      options={filteredImoveisForm.map((i) => ({ value: i.id, label: i.codigo }))}
+                      value={form.imovel_id ?? ""}
+                      onChange={(v) => setForm({ ...form, imovel_id: v })}
+                      placeholder="Opcional"
+                      searchPlaceholder="Buscar imóvel..."
+                      clearable
+                    />
                   </div>
                   <div className="space-y-1.5"><Label>Data *</Label><Input type="date" value={form.data ?? ""} onChange={(e) => setForm({ ...form, data: e.target.value })} /></div>
                   <div className="space-y-1.5"><Label>Valor *</Label><Input type="number" step="0.01" value={form.valor ?? ""} onChange={(e) => setForm({ ...form, valor: e.target.value })} /></div>
@@ -97,10 +122,13 @@ export default function Adiantamentos() {
                 <DialogFooter><Button onClick={save}>Salvar</Button></DialogFooter>
               </DialogContent>
             </Dialog>
-          </div>
+          </>
         }
       />
-      <div className="p-6">
+      <div className="p-6 space-y-4">
+        <div className="text-sm text-muted-foreground">
+          Total no mês: <span className="num font-semibold text-foreground">{brl(total)}</span> · {filtered.length} adiantamentos
+        </div>
         <Card className="shadow-card"><CardContent className="p-0">
           <Table>
             <TableHeader><TableRow>
@@ -108,8 +136,8 @@ export default function Adiantamentos() {
               <TableHead>Origem</TableHead><TableHead>Valor</TableHead><TableHead></TableHead>
             </TableRow></TableHeader>
             <TableBody>
-              {list.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Sem adiantamentos no mês.</TableCell></TableRow>}
-              {list.map((a) => (
+              {filtered.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Sem adiantamentos no mês.</TableCell></TableRow>}
+              {filtered.map((a) => (
                 <TableRow key={a.id}>
                   <TableCell>{dateBR(a.data)}</TableCell>
                   <TableCell className="font-medium">{a.investidores?.nome}</TableCell>

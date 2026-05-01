@@ -82,11 +82,11 @@ export default function Hospedagens() {
               placeholder="Todos os imóveis"
               searchPlaceholder="Filtrar imóvel..."
               clearable
-              className="w-[220px]"
+              className="min-w-[220px] sm:flex-1 lg:flex-none"
             />
             <MonthPicker value={mes} onChange={setMes} />
             <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setForm({}); }}>
-              <DialogTrigger asChild><Button><Plus className="mr-2 h-4 w-4" />Nova hospedagem</Button></DialogTrigger>
+              <DialogTrigger asChild><Button className="w-full sm:flex-1 lg:w-auto lg:flex-none"><Plus className="mr-2 h-4 w-4" />Nova hospedagem</Button></DialogTrigger>
               <DialogContent className="max-w-lg">
                 <DialogHeader><DialogTitle>Nova hospedagem</DialogTitle></DialogHeader>
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -129,8 +129,8 @@ export default function Hospedagens() {
             <div className="num mt-1 text-xl font-semibold">{brl(liquido)}</div>
           </CardContent></Card>
         </div>
-        <Card className="shadow-card"><CardContent className="p-0">
-          <Table>
+        <Card className="shadow-card"><CardContent className="overflow-x-auto p-0">
+          <Table className="min-w-[760px]">
             <TableHeader><TableRow>
               <TableHead>Imóvel</TableHead><TableHead>Check-in</TableHead><TableHead>Check-out</TableHead>
               <TableHead>Noites</TableHead><TableHead>Hósp.</TableHead><TableHead>Bruto</TableHead>

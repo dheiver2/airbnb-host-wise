@@ -13,13 +13,13 @@ export const PageHeader = forwardRef<HTMLDivElement, Props>(function PageHeader(
   return (
     <div
       ref={ref}
-      className="flex flex-col gap-2 border-b border-border bg-gradient-subtle px-6 py-6 sm:flex-row sm:items-center sm:justify-between"
+      className="flex flex-col gap-4 border-b border-border bg-gradient-subtle px-4 py-5 sm:px-6 sm:py-6 lg:flex-row lg:items-center lg:justify-between"
     >
-      <div>
+      <div className="min-w-0">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">{title}</h1>
         {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
       </div>
-      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+      {actions && <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:items-center lg:w-auto lg:justify-end">{actions}</div>}
     </div>
   );
 });

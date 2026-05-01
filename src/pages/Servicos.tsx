@@ -63,10 +63,10 @@ export default function Servicos() {
         title="Serviços operacionais"
         description="Faxina, lavanderia, material — custo pago e valor cobrado do investidor."
         actions={
-          <div className="flex items-center gap-2">
+          <div className="contents sm:flex sm:w-full sm:flex-wrap sm:items-center sm:gap-2 lg:w-auto">
             <MonthPicker value={mes} onChange={setMes} />
             <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setForm({}); }}>
-              <DialogTrigger asChild><Button><Plus className="mr-2 h-4 w-4" />Novo lançamento</Button></DialogTrigger>
+              <DialogTrigger asChild><Button className="w-full sm:flex-1 lg:w-auto lg:flex-none"><Plus className="mr-2 h-4 w-4" />Novo lançamento</Button></DialogTrigger>
               <DialogContent>
                 <DialogHeader><DialogTitle>Novo serviço</DialogTitle></DialogHeader>
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -96,8 +96,8 @@ export default function Servicos() {
         }
       />
       <div className="p-6">
-        <Card className="shadow-card"><CardContent className="p-0">
-          <Table>
+        <Card className="shadow-card"><CardContent className="overflow-x-auto p-0">
+          <Table className="min-w-[760px]">
             <TableHeader><TableRow>
               <TableHead>Data</TableHead><TableHead>Imóvel</TableHead><TableHead>Tipo</TableHead>
               <TableHead>Prestador</TableHead><TableHead>Custo</TableHead><TableHead>Cobrado</TableHead>

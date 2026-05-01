@@ -39,7 +39,7 @@ export function Combobox({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className={cn("justify-between font-normal", className)}
+          className={cn("w-full min-w-[172px] justify-between font-normal sm:w-auto", className)}
         >
           <span className="truncate">{selected ? selected.label : placeholder}</span>
           <div className="flex items-center gap-1">

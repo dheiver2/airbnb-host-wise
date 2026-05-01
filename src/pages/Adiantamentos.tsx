@@ -77,11 +77,11 @@ export default function Adiantamentos() {
               placeholder="Todos investidores"
               searchPlaceholder="Filtrar investidor..."
               clearable
-              className="w-[220px]"
+              className="min-w-[220px] sm:flex-1 lg:flex-none"
             />
             <MonthPicker value={mes} onChange={setMes} />
             <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setForm({ origem: "empresa_repasse" }); }}>
-              <DialogTrigger asChild><Button><Plus className="mr-2 h-4 w-4" />Novo adiantamento</Button></DialogTrigger>
+              <DialogTrigger asChild><Button className="w-full sm:flex-1 lg:w-auto lg:flex-none"><Plus className="mr-2 h-4 w-4" />Novo adiantamento</Button></DialogTrigger>
               <DialogContent>
                 <DialogHeader><DialogTitle>Novo adiantamento</DialogTitle></DialogHeader>
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -130,8 +130,8 @@ export default function Adiantamentos() {
         <div className="text-sm text-muted-foreground">
           Total no mês: <span className="num font-semibold text-foreground">{brl(total)}</span> · {filtered.length} adiantamentos
         </div>
-        <Card className="shadow-card"><CardContent className="p-0">
-          <Table>
+        <Card className="shadow-card"><CardContent className="overflow-x-auto p-0">
+          <Table className="min-w-[760px]">
             <TableHeader><TableRow>
               <TableHead>Data</TableHead><TableHead>Investidor</TableHead><TableHead>Imóvel</TableHead>
               <TableHead>Origem</TableHead><TableHead>Valor</TableHead><TableHead></TableHead>

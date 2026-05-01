@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
+import { MonthPicker } from "@/components/MonthPicker";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { brl, monthRange, monthInputValue } from "@/lib/format";
 import { useCompetenciaState } from "@/hooks/useLatestCompetencia";
@@ -77,7 +78,7 @@ export default function Dashboard() {
         actions={
           <div className="flex items-center gap-2">
             <Label htmlFor="mes" className="text-sm">Mês</Label>
-            <Input id="mes" type="month" value={mes} onChange={(e) => setMes(e.target.value)} className="w-[160px]" />
+            <MonthPicker id="mes" value={mes} onChange={setMes} />
           </div>
         }
       />

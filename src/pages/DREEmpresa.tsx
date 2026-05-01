@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
+import { MonthPicker } from "@/components/MonthPicker";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -87,7 +88,7 @@ export default function DREEmpresa() {
         description="Visão consolidada — receitas, custos e margem."
         actions={
           <div className="flex items-center gap-2 print:hidden">
-            <Input type="month" value={mes} onChange={(e) => setMes(e.target.value)} className="w-[160px]" />
+            <MonthPicker value={mes} onChange={setMes} />
             <Button variant="outline" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" />Imprimir / PDF</Button>
           </div>
         }

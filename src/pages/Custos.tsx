@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
+import { MonthPicker } from "@/components/MonthPicker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -58,7 +59,7 @@ export default function Custos() {
         description="Custos fixos e folha de pagamento — entram apenas no DRE da empresa."
         actions={
           <div className="flex items-center gap-2">
-            <Input type="month" value={mes} onChange={(e) => setMes(e.target.value)} className="w-[160px]" />
+            <MonthPicker value={mes} onChange={setMes} />
             <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setForm({}); }}>
               <DialogTrigger asChild><Button><Plus className="mr-2 h-4 w-4" />Novo custo</Button></DialogTrigger>
               <DialogContent>

@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { brl, monthInputValue, monthRange, monthBR, pct } from "@/lib/format";
+import { useLatestCompetencia } from "@/hooks/useLatestCompetencia";
 import { Printer } from "lucide-react";
 
 const CUSTO_LABELS: Record<string, string> = {
@@ -14,7 +15,7 @@ const CUSTO_LABELS: Record<string, string> = {
 };
 
 export default function DREEmpresa() {
-  const [mes, setMes] = useState(monthInputValue());
+  const [mes, setMes] = useState(useLatestCompetencia());
   const [reservas, setReservas] = useState<any[]>([]);
   const [imoveisMap, setImoveisMap] = useState<Record<string, any>>({});
   const [servicos, setServicos] = useState<any[]>([]);

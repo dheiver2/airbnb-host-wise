@@ -24,7 +24,9 @@ const FIELD_OPTIONS: Record<Tipo, { key: string; label: string; required?: boole
     { key: "check_out", label: "Data de término (check-out)", required: true },
     { key: "hospedes", label: "Hóspede (nome)" },
     { key: "noites", label: "Noites" },
-    { key: "valor", label: "Valor", required: true },
+    { key: "valor", label: "Valor bruto", required: true },
+    { key: "taxa", label: "Taxa de serviço do anfitrião" },
+    { key: "valor_liq", label: "Valor líquido" },
   ],
   adiantamentos: [
     { key: "anuncio", label: "Anúncio (extrai código)", required: true },
@@ -102,6 +104,8 @@ export default function Importar() {
       hospedes: ["hospede", "hospedes"],
       noites: ["noites", "diarias"],
       valor: ["valor", "somadevalor", "valorbruto", "total"],
+      taxa: ["taxadeservico", "taxadoanfitriao", "taxa", "servicefee", "hostfee"],
+      valor_liq: ["valorliquido", "liquido", "netliquido", "payout"],
       data: ["data", "datapagamento"],
     };
     const auto: Record<string, string> = {};
@@ -187,6 +191,13 @@ export default function Importar() {
     const errosDetalhe: string[] = [];
 
     if (tipo === "faturamento") {
+      type PendingReserva = {
+        imovel_id: string; check_in: string; check_out: string;
+        valor_bruto: number; taxas_airbnb: number; valor_liquido: number;
+        mes_competencia: string; codigo_airbnb: string | null;
+      };
+      const pending: PendingReserva[] = [];
+
       for (const row of rows) {
         const anuncio = row[mapping.anuncio];
         const codigo = extractCodigo(String(anuncio ?? ""));
@@ -198,23 +209,52 @@ export default function Importar() {
         if (!checkIn || !checkOut) { erros++; continue; }
         const valor = parseNum(row[mapping.valor]);
         if (valor <= 0) { erros++; continue; }
-        const competencia = `${checkOut.slice(0, 7)}-01`;
+        const taxa = mapping.taxa ? Math.abs(parseNum(row[mapping.taxa])) : 0;
+        const valorLiqRaw = mapping.valor_liq ? parseNum(row[mapping.valor_liq]) : 0;
+        const valorLiquido = valorLiqRaw > 0 ? valorLiqRaw : valor - taxa;
         const hospede = mapping.hospedes ? String(row[mapping.hospedes] ?? "").trim() : "";
-
-        // dedupe por (imóvel, check_in, check_out, valor)
-        const { data: dup } = await supabase.from("reservas").select("id")
-          .eq("imovel_id", im.id).eq("check_in", checkIn).eq("check_out", checkOut)
-          .eq("valor_bruto", valor).maybeSingle();
-        if (dup) { duplicados++; continue; }
-
-        const { error } = await supabase.from("reservas").insert({
-          codigo_airbnb: hospede ? hospede.slice(0, 60) : null,
+        pending.push({
           imovel_id: im.id, check_in: checkIn, check_out: checkOut,
-          hospedes: 1, valor_bruto: valor, taxas_airbnb: 0, valor_liquido: valor,
-          mes_competencia: competencia,
+          valor_bruto: valor, taxas_airbnb: taxa, valor_liquido: valorLiquido,
+          mes_competencia: `${checkOut.slice(0, 7)}-01`,
+          codigo_airbnb: hospede ? hospede.slice(0, 60) : null,
         });
-        if (error) { erros++; if (errosDetalhe.length < 5) errosDetalhe.push(error.message); }
-        else inseridos++;
+      }
+
+      if (pending.length > 0) {
+        // dedupe em lote: 1 query para buscar reservas já existentes
+        const imovelIds = [...new Set(pending.map((r) => r.imovel_id))];
+        const checkIns = [...new Set(pending.map((r) => r.check_in))];
+        const { data: existing } = await supabase.from("reservas")
+          .select("imovel_id, check_in, check_out, valor_bruto")
+          .in("imovel_id", imovelIds).in("check_in", checkIns);
+        const existingSet = new Set(
+          (existing ?? []).map((r) => `${r.imovel_id}|${r.check_in}|${r.check_out}|${r.valor_bruto}`)
+        );
+
+        const toInsert: PendingReserva[] = [];
+        for (const r of pending) {
+          if (existingSet.has(`${r.imovel_id}|${r.check_in}|${r.check_out}|${r.valor_bruto}`)) {
+            duplicados++;
+          } else {
+            toInsert.push(r);
+          }
+        }
+
+        // INSERT em chunks de 500
+        const CHUNK = 500;
+        for (let i = 0; i < toInsert.length; i += CHUNK) {
+          const chunk = toInsert.slice(i, i + CHUNK);
+          const { error } = await supabase.from("reservas").insert(
+            chunk.map((r) => ({ ...r, hospedes: 1 }))
+          );
+          if (error) {
+            erros += chunk.length;
+            if (errosDetalhe.length < 5) errosDetalhe.push(error.message);
+          } else {
+            inseridos += chunk.length;
+          }
+        }
       }
     } else {
       for (const row of rows) {
@@ -327,7 +367,7 @@ export default function Importar() {
                                   </TableCell>
                                   {FIELD_OPTIONS[t].map((f) => {
                                     const raw = r[mapping[f.key]];
-                                    const isVal = ["valor"].includes(f.key);
+                                    const isVal = ["valor", "taxa", "valor_liq"].includes(f.key);
                                     const isDate = ["check_in", "check_out", "data"].includes(f.key);
                                     return <TableCell key={f.key} className={isVal ? "num" : ""}>
                                       {isVal ? brl(parseNum(raw)) : isDate ? (parseDate(raw) ? dateBR(parseDate(raw)!) : String(raw ?? "—")) : String(raw ?? "—")}

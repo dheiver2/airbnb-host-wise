@@ -38,6 +38,37 @@ function getAnexos(item: any): Anexo[] {
   return item.anexos as Anexo[];
 }
 
+// Fora do componente para evitar remount a cada render
+function FileSelector({
+  files, onChange, inputRef,
+}: { files: File[]; onChange: (f: File[]) => void; inputRef: React.RefObject<HTMLInputElement> }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {files.map((f, i) => (
+        <Badge key={i} variant="secondary" className="gap-1 max-w-[180px]">
+          <span className="truncate">{f.name}</span>
+          <button type="button" onClick={() => onChange(files.filter((_, j) => j !== i))}>
+            <X className="h-3 w-3 shrink-0" />
+          </button>
+        </Badge>
+      ))}
+      <Button
+        type="button" size="sm" variant="outline" className="h-7 gap-1"
+        onClick={() => inputRef.current?.click()}
+      >
+        <Upload className="h-3.5 w-3.5" />Adicionar
+      </Button>
+      <input
+        ref={inputRef} type="file" multiple className="hidden"
+        onChange={(e) => {
+          onChange([...files, ...Array.from(e.target.files ?? [])]);
+          if (inputRef.current) inputRef.current.value = "";
+        }}
+      />
+    </div>
+  );
+}
+
 export default function Servicos() {
   const [mes, setMes] = useCompetenciaState();
   const [imoveis, setImoveis] = useState<any[]>([]);
@@ -183,34 +214,6 @@ export default function Servicos() {
     setAnexoCtx({ ...anexoCtx, current: merged });
     setUploading(false);
     if (anexoCtx.tabela === "servicos_operacionais") loadServ(); else loadMan();
-  }
-
-  // ── Seletor de arquivos reutilizável no formulário ──
-  function FileSelector({
-    files, onChange, inputRef,
-  }: { files: File[]; onChange: (f: File[]) => void; inputRef: React.RefObject<HTMLInputElement> }) {
-    return (
-      <div className="flex flex-wrap gap-2">
-        {files.map((f, i) => (
-          <Badge key={i} variant="secondary" className="gap-1 max-w-[180px]">
-            <span className="truncate">{f.name}</span>
-            <button type="button" onClick={() => onChange(files.filter((_, j) => j !== i))}>
-              <X className="h-3 w-3 shrink-0" />
-            </button>
-          </Badge>
-        ))}
-        <Button
-          type="button" size="sm" variant="outline" className="h-7 gap-1"
-          onClick={() => inputRef.current?.click()}
-        >
-          <Upload className="h-3.5 w-3.5" />Adicionar
-        </Button>
-        <input
-          ref={inputRef} type="file" multiple className="hidden"
-          onChange={(e) => onChange([...files, ...Array.from(e.target.files ?? [])])}
-        />
-      </div>
-    );
   }
 
   return (
@@ -463,7 +466,10 @@ export default function Servicos() {
               </Button>
               <input
                 ref={addAnexoRef} type="file" multiple className="hidden"
-                onChange={(e) => addToExisting(e.target.files)}
+                onChange={(e) => {
+                  addToExisting(e.target.files);
+                  if (addAnexoRef.current) addAnexoRef.current.value = "";
+                }}
               />
             </DialogFooter>
           </DialogContent>

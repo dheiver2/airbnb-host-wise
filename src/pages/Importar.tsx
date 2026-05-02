@@ -77,16 +77,15 @@ export default function Importar() {
   const [headers, setHeaders] = useState<string[]>([]);
   const [mapping, setMapping] = useState<Record<string, string>>({});
   const [imoveis, setImoveis] = useState<any[]>([]);
-  const [investidores, setInvestidores] = useState<any[]>([]);
   const [history, setHistory] = useState<any[]>([]);
   const [filename, setFilename] = useState("");
   const [sheetNames, setSheetNames] = useState<string[]>([]);
   const [activeSheet, setActiveSheet] = useState<string>("");
   const [workbook, setWorkbook] = useState<XLSX.WorkBook | null>(null);
+  const [fileKey, setFileKey] = useState(0); // força reset do <input file> após importação
 
   useEffect(() => {
     supabase.from("imoveis").select("id, codigo, investidor_id").then(({ data }) => setImoveis(data ?? []));
-    supabase.from("investidores").select("id, nome").then(({ data }) => setInvestidores(data ?? []));
     loadHistory();
   }, []);
 
@@ -259,22 +258,52 @@ export default function Importar() {
         }
       }
     } else {
+      // ── Adiantamentos: parse → dedupe em lote → batch insert ──
+      type PendingAdt = {
+        investidor_id: string; imovel_id: string;
+        data: string; valor: number; mes_competencia: string;
+      };
+      const pendingAdt: PendingAdt[] = [];
+
       for (const row of rows) {
         const anuncio = row[mapping.anuncio];
         const codigo = extractCodigo(String(anuncio ?? ""));
         if (!codigo) { erros++; continue; }
         const im = codigoIndex.get(codigo.toLowerCase());
         if (!im) { erros++; if (errosDetalhe.length < 5) errosDetalhe.push(`Imóvel não encontrado: ${codigo}`); continue; }
+        if (!im.investidor_id) { erros++; if (errosDetalhe.length < 5) errosDetalhe.push(`Imóvel sem investidor: ${codigo}`); continue; }
         const data = parseDate(row[mapping.data]);
         const valor = parseNum(row[mapping.valor]);
-        if (!data || valor <= 0) { erros++; continue; }
-        const competencia = `${data.slice(0, 7)}-01`;
-        const { error } = await supabase.from("adiantamentos").insert({
-          investidor_id: im.investidor_id, imovel_id: im.id,
-          data, valor, origem: "airbnb_direto", mes_competencia: competencia,
-        });
-        if (error) { erros++; if (errosDetalhe.length < 5) errosDetalhe.push(error.message); }
-        else inseridos++;
+        if (!data) { erros++; if (errosDetalhe.length < 5) errosDetalhe.push(`Data inválida na linha de ${codigo}`); continue; }
+        if (valor <= 0) { erros++; if (errosDetalhe.length < 5) errosDetalhe.push(`Valor inválido na linha de ${codigo}`); continue; }
+        pendingAdt.push({ investidor_id: im.investidor_id, imovel_id: im.id, data, valor, mes_competencia: `${data.slice(0, 7)}-01` });
+      }
+
+      if (pendingAdt.length > 0) {
+        const imovelIds = [...new Set(pendingAdt.map((r) => r.imovel_id))];
+        const datas = [...new Set(pendingAdt.map((r) => r.data))];
+        const { data: existingAdt } = await supabase.from("adiantamentos")
+          .select("imovel_id, data, valor")
+          .in("imovel_id", imovelIds).in("data", datas);
+        const existingAdtSet = new Set(
+          (existingAdt ?? []).map((r) => `${r.imovel_id}|${r.data}|${r.valor}`)
+        );
+
+        const toInsertAdt: PendingAdt[] = [];
+        for (const r of pendingAdt) {
+          if (existingAdtSet.has(`${r.imovel_id}|${r.data}|${r.valor}`)) { duplicados++; }
+          else { toInsertAdt.push(r); }
+        }
+
+        const CHUNK = 500;
+        for (let i = 0; i < toInsertAdt.length; i += CHUNK) {
+          const chunk = toInsertAdt.slice(i, i + CHUNK);
+          const { error } = await supabase.from("adiantamentos").insert(
+            chunk.map((r) => ({ ...r, origem: "airbnb_direto" }))
+          );
+          if (error) { erros += chunk.length; if (errosDetalhe.length < 5) errosDetalhe.push(error.message); }
+          else inseridos += chunk.length;
+        }
       }
     }
 
@@ -287,13 +316,15 @@ export default function Importar() {
         tipo, arquivo: filename, total_linhas: rows.length, inseridos, duplicados, erros,
       });
       if (logErr) console.error("Falha ao salvar histórico:", logErr.message);
-      if (erros > 0 && errosDetalhe.length) {
-        toast.warning(`Concluído com erros. Ex.: ${errosDetalhe.join(" | ")}`);
-      }
       if (inseridos > 0) {
         toast.success(`Importação: ${inseridos} inseridos, ${duplicados} duplicados, ${erros} erros`);
+      } else if (duplicados > 0 && erros === 0) {
+        toast.info(`Tudo já estava importado: ${duplicados} duplicados.`);
+      } else if (erros > 0) {
+        toast.warning(`Nenhuma linha inserida. ${erros} erros. Ex.: ${errosDetalhe.slice(0, 3).join(" | ")}`);
       }
       setRows([]); setHeaders([]); setMapping({}); setFilename(""); setWorkbook(null); setSheetNames([]); setActiveSheet("");
+      setFileKey((k) => k + 1); // reseta o <input file> para permitir reimportar o mesmo arquivo
       loadHistory();
     }
   }
@@ -316,7 +347,7 @@ export default function Importar() {
                   <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/30 px-6 py-10 text-center hover:bg-muted/50">
                     <Upload className="mb-2 h-6 w-6 text-muted-foreground" />
                     <span className="text-sm text-muted-foreground">{filename || "Clique para enviar .csv ou .xlsx"}</span>
-                    <Input type="file" accept=".csv,.xlsx,.xls,text/csv" className="hidden" onChange={onFile} />
+                    <Input key={fileKey} type="file" accept=".csv,.xlsx,.xls,text/csv" className="hidden" onChange={onFile} />
                   </label>
                   {sheetNames.length > 1 && (
                     <div className="space-y-1.5 max-w-sm">

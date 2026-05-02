@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { MonthPicker } from "@/components/MonthPicker";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { brl, daysInMonth, monthDate, monthRange } from "@/lib/format";
 import { useCompetenciaState } from "@/hooks/useLatestCompetencia";
@@ -17,32 +18,99 @@ type Stats = {
   adr: number;
   revpar: number;
   noites: number;
-  // MoM (variação % vs mês anterior)
   momFaturamento: number;
   momLucro: number;
   momOcupacao: number;
   momAdr: number;
 };
 
-const ZERO: Stats = { faturamento: 0, lucro: 0, imoveis: 0, ocupacao: 0, adr: 0, revpar: 0, noites: 0, momFaturamento: 0, momLucro: 0, momOcupacao: 0, momAdr: 0 };
+const ZERO: Stats = {
+  faturamento: 0, lucro: 0, imoveis: 0, ocupacao: 0,
+  adr: 0, revpar: 0, noites: 0,
+  momFaturamento: 0, momLucro: 0, momOcupacao: 0, momAdr: 0,
+};
+
+// Total de dias em um intervalo (inclusive)
+function totalDiasRange(iniYm: string, fimYm: string): number {
+  let total = 0;
+  const d = monthDate(iniYm);
+  const fim = monthDate(fimYm);
+  while (d <= fim) {
+    total += daysInMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+    d.setMonth(d.getMonth() + 1);
+  }
+  return total;
+}
+
+// Período anterior de mesmo tamanho
+function periodoAnterior(iniYm: string, fimYm: string) {
+  const ini = monthDate(iniYm);
+  const fim = monthDate(fimYm);
+  const meses = (fim.getFullYear() - ini.getFullYear()) * 12 + fim.getMonth() - ini.getMonth() + 1;
+  const prevFim = new Date(ini.getFullYear(), ini.getMonth() - 1, 1);
+  const prevIni = new Date(prevFim.getFullYear(), prevFim.getMonth() - meses + 1, 1);
+  const toYm = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  return { prevIni: toYm(prevIni), prevFim: toYm(prevFim) };
+}
 
 export default function Dashboard() {
-  const [mes, setMes] = useCompetenciaState();
+  const [mesIni, setMesIniRaw] = useCompetenciaState();
+  const [mesFim, setMesFim] = useState(mesIni);
+  const didInitFim = useRef(false);
+
   const [stats, setStats] = useState<Stats>(ZERO);
   const [evolucao, setEvolucao] = useState<{ mes: string; valor: number }[]>([]);
   const [topImoveis, setTopImoveis] = useState<{ codigo: string; valor: number }[]>([]);
 
-  useEffect(() => { loadAll(); }, [mes]);
+  // Sincroniza mesFim na primeira carga assíncrona do mesIni
+  useEffect(() => {
+    if (mesIni && !didInitFim.current) {
+      setMesFim(mesIni);
+      didInitFim.current = true;
+    }
+  }, [mesIni]);
 
-  // Calcula KPIs de um mês específico
-  async function computeMonth(ym: string, imoveis: any[], imoveisMap: Record<string, any>) {
-    const { start, end } = monthRange(ym);
+  useEffect(() => { if (mesIni && mesFim) loadAll(); }, [mesIni, mesFim]);
+
+  function setMesIni(v: string) {
+    setMesIniRaw(v);
+    if (v > mesFim) setMesFim(v); // ini não pode passar do fim
+  }
+
+  function handleSetMesFim(v: string) {
+    if (v < mesIni) {
+      // troca os dois
+      setMesFim(mesIni);
+      setMesIniRaw(v);
+    } else {
+      setMesFim(v);
+    }
+  }
+
+  function setAnoTodo() {
+    const year = mesIni.slice(0, 4);
+    const hoje = new Date();
+    const hojeYm = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}`;
+    const fimAno = `${year}-12`;
+    setMesIniRaw(`${year}-01`);
+    setMesFim(hojeYm < fimAno ? hojeYm : fimAno);
+  }
+
+  // Calcula KPIs de um intervalo qualquer
+  async function computeRange(
+    iniYm: string, fimYm: string,
+    imoveis: any[], imoveisMap: Record<string, any>,
+  ) {
+    const { start } = monthRange(iniYm);
+    const { end } = monthRange(fimYm);
+
     const [r, s, m, c] = await Promise.all([
       supabase.from("reservas").select("valor_bruto, check_in, check_out, imovel_id").gte("mes_competencia", start).lte("mes_competencia", end),
       supabase.from("servicos_operacionais").select("custo_real, valor_cobrado, tipo").gte("mes_competencia", start).lte("mes_competencia", end),
       supabase.from("manutencoes").select("custo, valor_cobrado, rateio").gte("mes_competencia", start).lte("mes_competencia", end),
       supabase.from("custos_fixos").select("valor").gte("mes_competencia", start).lte("mes_competencia", end),
     ]);
+
     const reservas = r.data ?? [];
     const servicos = s.data ?? [];
     const manuts = m.data ?? [];
@@ -50,34 +118,27 @@ export default function Dashboard() {
 
     const faturamento = reservas.reduce((acc, x: any) => acc + Number(x.valor_bruto || 0), 0);
 
-    // Receita da empresa = comissão + serviços cobrados + manutenção cobrada
     const comissao = reservas.reduce((acc, x: any) => {
       const im = imoveisMap[x.imovel_id];
-      if (!im) return acc;
-      return acc + Number(x.valor_bruto || 0) * (Number(im.percentual_comissao) / 100);
+      return acc + (im ? Number(x.valor_bruto || 0) * (Number(im.percentual_comissao) / 100) : 0);
     }, 0);
     const recServ = servicos.reduce((a, x: any) => a + Number(x.valor_cobrado || 0), 0);
     const recManut = manuts.filter((x: any) => x.rateio === "investidor").reduce((a, x: any) => a + Number(x.valor_cobrado || 0), 0);
     const receitaEmpresa = comissao + recServ + recManut;
 
-    // Custos da empresa
     const custoServ = servicos.reduce((a, x: any) => a + Number(x.custo_real || 0), 0);
     const custoManut = manuts.reduce((a, x: any) => a + Number(x.custo || 0), 0);
     const custoFixo = custos.reduce((a, x: any) => a + Number(x.valor || 0), 0);
-
     const lucro = receitaEmpresa - custoServ - custoManut - custoFixo;
 
-    // Ocupação
-    const dias = daysInMonth(ym);
+    // Ocupação usa total de dias do intervalo
+    const dias = totalDiasRange(iniYm, fimYm);
     let noites = 0;
     reservas.forEach((x: any) => {
-      const ci = new Date(x.check_in).getTime();
-      const co = new Date(x.check_out).getTime();
-      noites += Math.max(0, Math.round((co - ci) / 86400000));
+      noites += Math.max(0, Math.round((new Date(x.check_out).getTime() - new Date(x.check_in).getTime()) / 86400000));
     });
     const cap = imoveis.length * dias;
     const ocupacao = cap > 0 ? (noites / cap) * 100 : 0;
-
     const adr = noites > 0 ? faturamento / noites : 0;
     const revpar = cap > 0 ? faturamento / cap : 0;
 
@@ -90,14 +151,12 @@ export default function Dashboard() {
     const imoveisMap: Record<string, any> = {};
     imoveis.forEach((x: any) => { imoveisMap[x.id] = x; });
 
-    // mês atual + mês anterior em paralelo
-    const dt = monthDate(mes);
-    const prev = new Date(dt.getFullYear(), dt.getMonth() - 1, 1);
-    const prevYm = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, "0")}`;
+    // Período selecionado + período anterior de mesmo tamanho
+    const { prevIni, prevFim } = periodoAnterior(mesIni, mesFim);
 
-    const [cur, prevK] = await Promise.all([
-      computeMonth(mes, imoveis, imoveisMap),
-      computeMonth(prevYm, imoveis, imoveisMap),
+    const [cur, prev] = await Promise.all([
+      computeRange(mesIni, mesFim, imoveis, imoveisMap),
+      computeRange(prevIni, prevFim, imoveis, imoveisMap),
     ]);
 
     const mom = (a: number, b: number) => (b > 0 ? ((a - b) / b) * 100 : 0);
@@ -110,43 +169,47 @@ export default function Dashboard() {
       adr: cur.adr,
       revpar: cur.revpar,
       noites: cur.noites,
-      momFaturamento: mom(cur.faturamento, prevK.faturamento),
-      momLucro: mom(cur.lucro, prevK.lucro),
-      momOcupacao: cur.ocupacao - prevK.ocupacao, // pp
-      momAdr: mom(cur.adr, prevK.adr),
+      momFaturamento: mom(cur.faturamento, prev.faturamento),
+      momLucro: mom(cur.lucro, prev.lucro),
+      momOcupacao: cur.ocupacao - prev.ocupacao,
+      momAdr: mom(cur.adr, prev.adr),
     });
 
-    // Top imóveis (mês atual)
-    const { start, end } = monthRange(mes);
-    const { data: rTop } = await supabase.from("reservas").select("valor_bruto, imovel_id").gte("mes_competencia", start).lte("mes_competencia", end);
+    // Top 5 imóveis no período selecionado
+    const { start, end } = monthRange(mesIni);
+    const { end: endFim } = monthRange(mesFim);
+    const { data: rTop } = await supabase.from("reservas").select("valor_bruto, imovel_id").gte("mes_competencia", start).lte("mes_competencia", endFim);
     const map: Record<string, number> = {};
     (rTop ?? []).forEach((r: any) => { map[r.imovel_id] = (map[r.imovel_id] || 0) + Number(r.valor_bruto || 0); });
-    const top = Object.entries(map)
-      .map(([id, valor]) => ({ codigo: imoveis.find((i: any) => i.id === id)?.codigo ?? "—", valor }))
-      .sort((a, b) => b.valor - a.valor).slice(0, 5);
-    setTopImoveis(top);
+    setTopImoveis(
+      Object.entries(map)
+        .map(([id, valor]) => ({ codigo: imoveis.find((i: any) => i.id === id)?.codigo ?? "—", valor }))
+        .sort((a, b) => b.valor - a.valor).slice(0, 5)
+    );
 
-    // Evolução 12 meses
-    const meses: { mes: string; valor: number }[] = [];
-    const promises: Promise<any>[] = [];
+    // Evolução: 12 meses terminando em mesFim
     const labels: string[] = [];
+    const promises: Promise<any>[] = [];
+    const fim = monthDate(mesFim);
     for (let i = 11; i >= 0; i--) {
-      const d = new Date(dt.getFullYear(), dt.getMonth() - i, 1);
+      const d = new Date(fim.getFullYear(), fim.getMonth() - i, 1);
       const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
       const { start: s, end: e } = monthRange(ym);
       labels.push(d.toLocaleDateString("pt-BR", { month: "short" }));
-      promises.push(Promise.resolve(supabase.from("reservas").select("valor_bruto").gte("mes_competencia", s).lte("mes_competencia", e)));
+      promises.push(supabase.from("reservas").select("valor_bruto").gte("mes_competencia", s).lte("mes_competencia", e));
     }
     const results = await Promise.all(promises);
-    results.forEach((res, idx) => {
-      const v = (res.data ?? []).reduce((sum: number, r: any) => sum + Number(r.valor_bruto || 0), 0);
-      meses.push({ mes: labels[idx], valor: v });
-    });
-    setEvolucao(meses);
+    setEvolucao(results.map((res, idx) => ({
+      mes: labels[idx],
+      valor: (res.data ?? []).reduce((sum: number, r: any) => sum + Number(r.valor_bruto || 0), 0),
+    })));
   }
 
+  const isRange = mesIni !== mesFim;
+  const momLabel = isRange ? "vs período anterior" : "vs mês anterior";
+
   const Delta = ({ v, suffix = "%", isPP = false }: { v: number; suffix?: string; isPP?: boolean }) => {
-    if (!isFinite(v) || v === 0) return <span className="text-xs text-muted-foreground">— vs mês anterior</span>;
+    if (!isFinite(v) || v === 0) return <span className="text-xs text-muted-foreground">— {momLabel}</span>;
     const up = v > 0;
     const Icon = up ? ArrowUp : ArrowDown;
     const cls = up ? "text-success" : "text-destructive";
@@ -155,7 +218,7 @@ export default function Dashboard() {
       <span className={`mt-1 inline-flex items-center gap-1 text-xs font-medium ${cls}`}>
         <Icon className="h-3 w-3" />
         {val}
-        <span className="ml-1 font-normal text-muted-foreground">vs mês anterior</span>
+        <span className="ml-1 font-normal text-muted-foreground">{momLabel}</span>
       </span>
     );
   };
@@ -168,7 +231,7 @@ export default function Dashboard() {
   ];
 
   const performance = [
-    { label: "ADR · diária média", value: brl(stats.adr), icon: BedDouble, delta: <Delta v={stats.momAdr} />, hint: `${stats.noites} noites no mês` },
+    { label: "ADR · diária média", value: brl(stats.adr), icon: BedDouble, delta: <Delta v={stats.momAdr} />, hint: `${stats.noites} noites no período` },
     { label: "RevPAR · receita / unidade", value: brl(stats.revpar), icon: Gauge, delta: null, hint: "Faturamento ÷ (imóveis × dias)" },
   ];
 
@@ -176,11 +239,24 @@ export default function Dashboard() {
     <>
       <PageHeader
         title="Dashboard"
-        description="Visão geral mensal da operação"
+        description={isRange ? `Período consolidado` : "Visão geral mensal da operação"}
         actions={
-          <div className="flex items-center gap-2">
-            <Label htmlFor="mes" className="text-sm">Mês</Label>
-            <MonthPicker id="mes" value={mes} onChange={setMes} />
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1.5">
+              <Label className="text-sm shrink-0">De</Label>
+              <MonthPicker value={mesIni} onChange={setMesIni} />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Label className="text-sm shrink-0">Até</Label>
+              <MonthPicker value={mesFim} onChange={handleSetMesFim} />
+            </div>
+            <Button
+              variant={isRange && mesFim.endsWith("-12") ? "default" : "outline"}
+              size="sm"
+              onClick={setAnoTodo}
+            >
+              Ano todo
+            </Button>
           </div>
         }
       />
@@ -221,7 +297,12 @@ export default function Dashboard() {
 
         <div className="grid gap-4 lg:grid-cols-3">
           <Card className="shadow-card lg:col-span-2">
-            <CardHeader><CardTitle className="text-base">Evolução mensal (faturamento)</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle className="text-base">
+                Evolução mensal (faturamento)
+                {isRange && <span className="ml-2 text-xs font-normal text-muted-foreground">12 meses até {mesFim}</span>}
+              </CardTitle>
+            </CardHeader>
             <CardContent className="h-[280px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={evolucao}>

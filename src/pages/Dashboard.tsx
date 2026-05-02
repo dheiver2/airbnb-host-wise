@@ -135,7 +135,7 @@ export default function Dashboard() {
       const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
       const { start: s, end: e } = monthRange(ym);
       labels.push(d.toLocaleDateString("pt-BR", { month: "short" }));
-      promises.push(supabase.from("reservas").select("valor_bruto").gte("mes_competencia", s).lte("mes_competencia", e));
+      promises.push(Promise.resolve(supabase.from("reservas").select("valor_bruto").gte("mes_competencia", s).lte("mes_competencia", e)));
     }
     const results = await Promise.all(promises);
     results.forEach((res, idx) => {

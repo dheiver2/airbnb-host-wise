@@ -13,7 +13,6 @@ import Imoveis from "./pages/Imoveis";
 import Parametros from "./pages/Parametros";
 import Hospedagens from "./pages/Hospedagens";
 import Servicos from "./pages/Servicos";
-import Manutencoes from "./pages/Manutencoes";
 import Adiantamentos from "./pages/Adiantamentos";
 import Custos from "./pages/Custos";
 import Importar from "./pages/Importar";
@@ -40,7 +39,6 @@ const App = () => (
               <Route path="/parametros" element={<Parametros />} />
               <Route path="/hospedagens" element={<Hospedagens />} />
               <Route path="/servicos" element={<Servicos />} />
-              <Route path="/manutencoes" element={<Manutencoes />} />
               <Route path="/adiantamentos" element={<Adiantamentos />} />
               <Route path="/custos" element={<Custos />} />
               <Route path="/importar" element={<Importar />} />

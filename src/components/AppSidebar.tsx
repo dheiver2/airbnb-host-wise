@@ -30,8 +30,7 @@ const groups = [
     label: "Operacional",
     items: [
       { title: "Hospedagens", url: "/hospedagens", icon: CalendarRange },
-      { title: "Serviços", url: "/servicos", icon: Receipt },
-      { title: "Manutenções", url: "/manutencoes", icon: Wrench },
+      { title: "Serviços & Manutenções", url: "/servicos", icon: Wrench },
       { title: "Adiantamentos", url: "/adiantamentos", icon: Wallet },
       { title: "Custos da empresa", url: "/custos", icon: Receipt },
       { title: "Importar Airbnb", url: "/importar", icon: Upload },

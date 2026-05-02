@@ -190,6 +190,8 @@ export default function Importar() {
     let inseridos = 0, duplicados = 0, erros = 0;
     const errosDetalhe: string[] = [];
 
+    try {
+
     if (tipo === "faturamento") {
       type PendingReserva = {
         imovel_id: string; check_in: string; check_out: string;
@@ -276,16 +278,24 @@ export default function Importar() {
       }
     }
 
-    await supabase.from("importacoes_airbnb").insert({
-      tipo, arquivo: filename, total_linhas: rows.length, inseridos, duplicados, erros,
-    });
-
-    if (erros > 0 && errosDetalhe.length) {
-      toast.warning(`Concluído com erros. Ex.: ${errosDetalhe.join(" | ")}`);
+    } catch (err: any) {
+      erros += rows.length - inseridos - duplicados;
+      errosDetalhe.push(err?.message ?? "Erro inesperado");
+      toast.error(`Erro na importação: ${err?.message ?? "Erro inesperado"}`);
+    } finally {
+      const { error: logErr } = await supabase.from("importacoes_airbnb").insert({
+        tipo, arquivo: filename, total_linhas: rows.length, inseridos, duplicados, erros,
+      });
+      if (logErr) console.error("Falha ao salvar histórico:", logErr.message);
+      if (erros > 0 && errosDetalhe.length) {
+        toast.warning(`Concluído com erros. Ex.: ${errosDetalhe.join(" | ")}`);
+      }
+      if (inseridos > 0) {
+        toast.success(`Importação: ${inseridos} inseridos, ${duplicados} duplicados, ${erros} erros`);
+      }
+      setRows([]); setHeaders([]); setMapping({}); setFilename(""); setWorkbook(null); setSheetNames([]); setActiveSheet("");
+      loadHistory();
     }
-    toast.success(`Importação: ${inseridos} inseridos, ${duplicados} duplicados, ${erros} erros`);
-    setRows([]); setHeaders([]); setMapping({}); setFilename(""); setWorkbook(null); setSheetNames([]); setActiveSheet("");
-    loadHistory();
   }
 
   return (

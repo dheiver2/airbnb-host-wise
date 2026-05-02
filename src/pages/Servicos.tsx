@@ -123,6 +123,21 @@ export default function Servicos() {
     setListMan(data ?? []);
   }
 
+  // ── Serviços: seleciona parâmetro ──
+  function selectParamServ(id: string) {
+    const p = params.find((x) => x.id === id);
+    if (!p) return;
+    const cat = (p.categoria ?? "").toLowerCase();
+    const tipoMapped = (TIPOS_SERVICO as readonly string[]).find((t) => cat.includes(t)) as typeof TIPOS_SERVICO[number] | undefined;
+    setFormServ((f: any) => ({
+      ...f,
+      parametro_id: id,
+      custo_real: p.custo,
+      valor_cobrado: p.valor_cobrado,
+      ...(tipoMapped ? { tipo: tipoMapped } : {}),
+    }));
+  }
+
   // ── Serviços ──
   function onTipoOrImovel(tipo: string, imovel_id: string) {
     const im = imoveis.find((i) => i.id === imovel_id);
@@ -139,10 +154,11 @@ export default function Servicos() {
     if (!formServ.imovel_id || !formServ.data || !formServ.tipo)
       return toast.error("Preencha imóvel, data e tipo");
     const competencia = `${String(formServ.data).slice(0, 7)}-01`;
-    const { data: inserted, error } = await supabase.from("servicos_operacionais").insert({
+    const { data: inserted, error } = await (supabase.from("servicos_operacionais") as any).insert({
       imovel_id: formServ.imovel_id, data: formServ.data, tipo: formServ.tipo,
       custo_real: Number(formServ.custo_real ?? 0), valor_cobrado: Number(formServ.valor_cobrado ?? 0),
       prestador: formServ.prestador || null, mes_competencia: competencia, anexos: [],
+      parametro_id: formServ.parametro_id || null,
     }).select("id").single();
     if (error) return toast.error(error.message);
     if (filesServ.length > 0) {
@@ -241,6 +257,23 @@ export default function Servicos() {
                 <DialogContent>
                   <DialogHeader><DialogTitle>Novo serviço</DialogTitle></DialogHeader>
                   <div className="grid gap-3 sm:grid-cols-2">
+                    {params.length > 0 && (
+                      <div className="space-y-1.5 sm:col-span-2">
+                        <Label>Parâmetro de serviço</Label>
+                        <Select value={formServ.parametro_id ?? ""} onValueChange={selectParamServ}>
+                          <SelectTrigger><SelectValue placeholder="Opcional — preenche custo, valor e tipo" /></SelectTrigger>
+                          <SelectContent>
+                            {params.map((p) => (
+                              <SelectItem key={p.id} value={p.id}>
+                                {p.nome}
+                                {p.categoria ? ` · ${p.categoria}` : ""}
+                                {` — ${brl(p.custo)} / ${brl(p.valor_cobrado)}`}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                     <div className="space-y-1.5">
                       <Label>Tipo *</Label>
                       <Select value={formServ.tipo ?? ""} onValueChange={(v) => onTipoOrImovel(v, formServ.imovel_id)}>
@@ -345,10 +378,18 @@ export default function Servicos() {
                       <Input type="date" value={formMan.data ?? ""} onChange={(e) => setFormMan({ ...formMan, data: e.target.value })} />
                     </div>
                     <div className="space-y-1.5 sm:col-span-2">
-                      <Label>Serviço (parâmetro)</Label>
+                      <Label>Parâmetro de serviço</Label>
                       <Select value={formMan.parametro_id ?? ""} onValueChange={selectParam}>
-                        <SelectTrigger><SelectValue placeholder="Opcional — preenche valores" /></SelectTrigger>
-                        <SelectContent>{params.map((p) => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>)}</SelectContent>
+                        <SelectTrigger><SelectValue placeholder="Opcional — preenche descrição, custo e valor" /></SelectTrigger>
+                        <SelectContent>
+                          {params.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>
+                              {p.nome}
+                              {p.categoria ? ` · ${p.categoria}` : ""}
+                              {` — ${brl(p.custo)} / ${brl(p.valor_cobrado)}`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-1.5 sm:col-span-2">

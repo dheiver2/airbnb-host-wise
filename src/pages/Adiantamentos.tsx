@@ -33,7 +33,7 @@ export default function Adiantamentos() {
 
   async function load() {
     const { start, end } = monthRange(mes);
-    const { data } = await supabase.from("adiantamentos").select("*, investidores(nome), imoveis(codigo)").gte("mes_competencia", start).lte("mes_competencia", end).order("data", { ascending: false });
+    const { data } = await supabase.from("adiantamentos").select("*, investidores(nome), imoveis(codigo)").gte("mes_competencia", start).lte("mes_competencia", end).eq("is_sa7d", false).order("data", { ascending: false });
     setList(data ?? []);
   }
 

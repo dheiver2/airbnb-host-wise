@@ -134,9 +134,13 @@ export default function Servicos() {
       parametro_id: id,
       custo_real: p.custo,
       valor_cobrado: p.valor_cobrado,
+      ...(p.imovel_id ? { imovel_id: p.imovel_id } : {}),
       ...(tipoMapped ? { tipo: tipoMapped } : {}),
     }));
   }
+
+  const paramsForImovel = (imovelId?: string) =>
+    params.filter((p) => !p.imovel_id || (imovelId && p.imovel_id === imovelId));
 
   // ── Serviços ──
   function onTipoOrImovel(tipo: string, imovel_id: string) {

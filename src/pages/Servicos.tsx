@@ -186,6 +186,7 @@ export default function Servicos() {
     setFormMan((f: any) => ({
       ...f, parametro_id: id, descricao: f.descricao || p.nome,
       categoria: p.categoria, custo: p.custo, valor_cobrado: p.valor_cobrado,
+      ...(p.imovel_id ? { imovel_id: p.imovel_id } : {}),
     }));
   }
 

@@ -509,6 +509,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _reimport_airbnb: {
+        Args: { p_adt: Json; p_res: Json }
+        Returns: {
+          adt_atualizados: number
+          adt_inseridos: number
+          reservas_atualizadas: number
+          reservas_inseridas: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

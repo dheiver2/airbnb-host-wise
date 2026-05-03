@@ -102,7 +102,7 @@ export default function Importar() {
       check_out: ["datadetermino", "checkout", "termino", "fim"],
       hospedes: ["hospede", "hospedes"],
       noites: ["noites", "diarias"],
-      valor: ["valor", "somadevalor", "valorbruto", "total"],
+      valor: ["ganhosbrutos", "valorbruto", "somadevalor", "total", "valor"],
       taxa: ["taxadeservico", "taxadoanfitriao", "taxa", "servicefee", "hostfee"],
       valor_liq: ["valorliquido", "liquido", "netliquido", "payout"],
       data: ["data", "datapagamento"],

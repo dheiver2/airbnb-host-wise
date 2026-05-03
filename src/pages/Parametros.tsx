@@ -68,6 +68,7 @@ export default function Parametros() {
                   <Combobox
                     clearable
                     placeholder="Geral (todos)"
+                    className="w-full sm:w-full"
                     options={imoveis.map((i) => ({ value: i.id, label: i.codigo, hint: i.endereco }))}
                     value={editing?.imovel_id ?? ""}
                     onChange={(v) => setEditing({ ...editing, imovel_id: v })}

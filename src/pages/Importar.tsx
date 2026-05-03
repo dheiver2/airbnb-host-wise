@@ -321,7 +321,7 @@ export default function Importar() {
         for (let i = 0; i < toInsertAdt.length; i += CHUNK) {
           const chunk = toInsertAdt.slice(i, i + CHUNK);
           const { error } = await supabase.from("adiantamentos").insert(
-            chunk.map((r) => ({ ...r, origem: "airbnb_direto" }))
+            chunk.map((r) => ({ ...r, origem: "airbnb_direto" as const }))
           );
           if (error) { erros += chunk.length; if (errosDetalhe.length < 5) errosDetalhe.push(error.message); }
           else inseridos += chunk.length;

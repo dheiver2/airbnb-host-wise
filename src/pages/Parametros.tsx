@@ -29,13 +29,21 @@ export default function Parametros() {
     setImoveis(im ?? []);
   }
 
+  const isLavanderia = (editing?.categoria ?? "").toLowerCase().includes("lavanderia");
+
   async function save() {
     if (!editing?.nome) return toast.error("Nome obrigatório");
+    const faixas = isLavanderia && editing?.faixas_hospedes
+      ? Object.fromEntries(
+          Object.entries(editing.faixas_hospedes).map(([k, v]: any) => [k, { custo: Number(v?.custo ?? 0), valor_cobrado: Number(v?.valor_cobrado ?? 0) }])
+        )
+      : null;
     const payload: any = {
       nome: editing.nome, categoria: editing.categoria,
       custo: Number(editing.custo ?? 0), valor_cobrado: Number(editing.valor_cobrado ?? 0),
       ativo: editing.ativo ?? true,
       imovel_id: editing.imovel_id || null,
+      faixas_hospedes: faixas,
     };
     const res = editing.id ? await supabase.from("parametros_servico").update(payload).eq("id", editing.id) : await supabase.from("parametros_servico").insert(payload);
     if (res.error) return toast.error(res.error.message);

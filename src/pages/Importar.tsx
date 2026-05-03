@@ -690,7 +690,9 @@ export default function Importar() {
         toast.warning(`Nenhuma linha inserida. ${erros} erros. Ex.: ${errosDetalhe.slice(0, 3).join(" | ")}`);
       }
       setRows([]); setHeaders([]); setMapping({}); setFilename(""); setWorkbook(null); setSheetNames([]); setActiveSheet("");
-      setFileKey((k) => k + 1); // reseta o <input file> para permitir reimportar o mesmo arquivo
+      setFileKey((k) => k + 1);
+      setReport(null);
+      setImporting(false);
       loadHistory();
     }
   }

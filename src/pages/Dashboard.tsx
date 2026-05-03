@@ -153,8 +153,8 @@ export default function Dashboard() {
     });
     const cap = imoveis.length * dias;
     const ocupacao = cap > 0 ? (noites / cap) * 100 : 0;
-    const adr = noites > 0 ? faturamento / noites : 0;
-    const revpar = cap > 0 ? faturamento / cap : 0;
+    const adr = noites > 0 ? reservasValorBruto / noites : 0;
+    const revpar = cap > 0 ? reservasValorBruto / cap : 0;
 
     const adiantamentos = (ad.data ?? []).reduce((a, x: any) => a + Number(x.valor || 0), 0);
 

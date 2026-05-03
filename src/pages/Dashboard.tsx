@@ -217,12 +217,12 @@ export default function Dashboard() {
       const s = toIsoDate(new Date(d.getFullYear(), d.getMonth(), 2));
       const e = toIsoDate(new Date(d.getFullYear(), d.getMonth() + 1, 1));
       labels.push(d.toLocaleDateString("pt-BR", { month: "short" }));
-      promises.push(supabase.from("reservas").select("valor_bruto").gte("check_in", s).lte("check_in", e) as unknown as Promise<any>);
+      promises.push(supabase.from("payouts").select("valor_pago").gte("data", s).lte("data", e) as unknown as Promise<any>);
     }
     const results = await Promise.all(promises);
     setEvolucao(results.map((res, idx) => ({
       mes: labels[idx],
-      valor: (res.data ?? []).reduce((sum: number, r: any) => sum + Number(r.valor_bruto || 0), 0),
+      valor: (res.data ?? []).reduce((sum: number, r: any) => sum + Number(r.valor_pago || 0), 0),
     })));
   }
 

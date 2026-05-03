@@ -101,6 +101,9 @@ export default function Importar() {
   const [activeSheet, setActiveSheet] = useState<string>("");
   const [workbook, setWorkbook] = useState<XLSX.WorkBook | null>(null);
   const [fileKey, setFileKey] = useState(0); // força reset do <input file> após importação
+  const [validating, setValidating] = useState(false);
+  const [report, setReport] = useState<ValidationReport | null>(null);
+  const [importing, setImporting] = useState(false);
 
   useEffect(() => {
     supabase.from("imoveis").select("id, codigo, investidor_id").then(({ data }) => setImoveis(data ?? []));

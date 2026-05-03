@@ -89,6 +89,25 @@ function parseNum(v: any): number {
   return isNaN(n) ? 0 : n;
 }
 
+type ValidationReport = {
+  totalLinhas: number;
+  reservasNovas: number;
+  reservasAtualizadas: number;
+  reservasDuplicadas: number;
+  payoutsNovos: number;
+  payoutsDuplicados: number;
+  adtNovos: number;
+  adtDuplicados: number;
+  somaPayouts: number;
+  somaPayoutsSA7D: number;
+  somaPayoutsInvestidores: number;
+  somaReservasBruto: number;
+  imoveisDesconhecidos: string[];
+  errosLinhas: string[];
+  divergencias: { codigo: string; check_in: string; antes: number; depois: number }[];
+  periodo: { inicio: string; fim: string } | null;
+};
+
 export default function Importar() {
   const [tipo, setTipo] = useState<Tipo>("extrato_completo");
   const [rows, setRows] = useState<any[]>([]);

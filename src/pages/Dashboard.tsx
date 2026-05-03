@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { brl, daysInMonth, monthDate, monthRange } from "@/lib/format";
 import { useCompetenciaState } from "@/hooks/useLatestCompetencia";
 import { Label } from "@/components/ui/label";
-import { Building2, TrendingUp, BarChart3, PiggyBank, ArrowUp, ArrowDown, BedDouble, Gauge } from "lucide-react";
+import { Building2, TrendingUp, BarChart3, PiggyBank, ArrowUp, ArrowDown, BedDouble, Gauge, Wallet } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 
 type Stats = {
@@ -18,16 +18,18 @@ type Stats = {
   adr: number;
   revpar: number;
   noites: number;
+  adiantamentos: number;
   momFaturamento: number;
   momLucro: number;
   momOcupacao: number;
   momAdr: number;
+  momAdiantamentos: number;
 };
 
 const ZERO: Stats = {
   faturamento: 0, lucro: 0, imoveis: 0, ocupacao: 0,
-  adr: 0, revpar: 0, noites: 0,
-  momFaturamento: 0, momLucro: 0, momOcupacao: 0, momAdr: 0,
+  adr: 0, revpar: 0, noites: 0, adiantamentos: 0,
+  momFaturamento: 0, momLucro: 0, momOcupacao: 0, momAdr: 0, momAdiantamentos: 0,
 };
 
 // Total de dias em um intervalo (inclusive)
@@ -104,11 +106,12 @@ export default function Dashboard() {
     const { start } = monthRange(iniYm);
     const { end } = monthRange(fimYm);
 
-    const [r, s, m, c] = await Promise.all([
+    const [r, s, m, c, ad] = await Promise.all([
       supabase.from("reservas").select("valor_bruto, check_in, check_out, imovel_id").gte("mes_competencia", start).lte("mes_competencia", end),
       supabase.from("servicos_operacionais").select("custo_real, valor_cobrado, tipo").gte("mes_competencia", start).lte("mes_competencia", end),
       supabase.from("manutencoes").select("custo, valor_cobrado, rateio").gte("mes_competencia", start).lte("mes_competencia", end),
       supabase.from("custos_fixos").select("valor").gte("mes_competencia", start).lte("mes_competencia", end),
+      supabase.from("adiantamentos").select("valor").gte("mes_competencia", start).lte("mes_competencia", end),
     ]);
 
     const reservas = r.data ?? [];
@@ -142,7 +145,9 @@ export default function Dashboard() {
     const adr = noites > 0 ? faturamento / noites : 0;
     const revpar = cap > 0 ? faturamento / cap : 0;
 
-    return { faturamento, lucro, ocupacao, adr, revpar, noites };
+    const adiantamentos = (ad.data ?? []).reduce((a, x: any) => a + Number(x.valor || 0), 0);
+
+    return { faturamento, lucro, ocupacao, adr, revpar, noites, adiantamentos };
   }
 
   async function loadAll() {
@@ -169,10 +174,12 @@ export default function Dashboard() {
       adr: cur.adr,
       revpar: cur.revpar,
       noites: cur.noites,
+      adiantamentos: cur.adiantamentos,
       momFaturamento: mom(cur.faturamento, prev.faturamento),
       momLucro: mom(cur.lucro, prev.lucro),
       momOcupacao: cur.ocupacao - prev.ocupacao,
       momAdr: mom(cur.adr, prev.adr),
+      momAdiantamentos: mom(cur.adiantamentos, prev.adiantamentos),
     });
 
     // Top 5 imóveis no período selecionado
@@ -233,6 +240,7 @@ export default function Dashboard() {
   const performance = [
     { label: "ADR · diária média", value: brl(stats.adr), icon: BedDouble, delta: <Delta v={stats.momAdr} />, hint: `${stats.noites} noites no período` },
     { label: "RevPAR · receita / unidade", value: brl(stats.revpar), icon: Gauge, delta: null, hint: "Faturamento ÷ (imóveis × dias)" },
+    { label: "Adiantamentos", value: brl(stats.adiantamentos), icon: Wallet, delta: <Delta v={stats.momAdiantamentos} />, hint: "Repasses no período" },
   ];
 
   return (
@@ -278,7 +286,7 @@ export default function Dashboard() {
           ))}
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {performance.map((c) => (
             <Card key={c.label} className="shadow-card">
               <CardContent className="flex items-start justify-between p-5">

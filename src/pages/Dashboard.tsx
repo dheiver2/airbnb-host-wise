@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { brl, daysInMonth, monthDate, monthRange } from "@/lib/format";
 import { useCompetenciaState } from "@/hooks/useLatestCompetencia";
 import { Label } from "@/components/ui/label";
-import { Building2, TrendingUp, BarChart3, PiggyBank, ArrowUp, ArrowDown, BedDouble, Gauge } from "lucide-react";
+import { Building2, TrendingUp, BarChart3, PiggyBank, ArrowUp, ArrowDown, BedDouble, Gauge, Wallet } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 
 type Stats = {

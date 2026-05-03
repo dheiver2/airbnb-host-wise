@@ -11,7 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, ShieldAlert, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { brl, dateBR } from "@/lib/format";
 
@@ -87,6 +89,25 @@ function parseNum(v: any): number {
   return isNaN(n) ? 0 : n;
 }
 
+type ValidationReport = {
+  totalLinhas: number;
+  reservasNovas: number;
+  reservasAtualizadas: number;
+  reservasDuplicadas: number;
+  payoutsNovos: number;
+  payoutsDuplicados: number;
+  adtNovos: number;
+  adtDuplicados: number;
+  somaPayouts: number;
+  somaPayoutsSA7D: number;
+  somaPayoutsInvestidores: number;
+  somaReservasBruto: number;
+  imoveisDesconhecidos: string[];
+  errosLinhas: string[];
+  divergencias: { codigo: string; check_in: string; antes: number; depois: number }[];
+  periodo: { inicio: string; fim: string } | null;
+};
+
 export default function Importar() {
   const [tipo, setTipo] = useState<Tipo>("extrato_completo");
   const [rows, setRows] = useState<any[]>([]);
@@ -99,6 +120,9 @@ export default function Importar() {
   const [activeSheet, setActiveSheet] = useState<string>("");
   const [workbook, setWorkbook] = useState<XLSX.WorkBook | null>(null);
   const [fileKey, setFileKey] = useState(0); // força reset do <input file> após importação
+  const [validating, setValidating] = useState(false);
+  const [report, setReport] = useState<ValidationReport | null>(null);
+  const [importing, setImporting] = useState(false);
 
   useEffect(() => {
     supabase.from("imoveis").select("id, codigo, investidor_id").then(({ data }) => setImoveis(data ?? []));
@@ -199,12 +223,155 @@ export default function Importar() {
     return m;
   }, [imoveis]);
 
-  async function importar() {
+  async function validar() {
     if (rows.length === 0) return toast.error("Carregue um arquivo");
     const required = FIELD_OPTIONS[tipo].filter((f) => f.required);
     for (const f of required) {
       if (!mapping[f.key]) return toast.error(`Mapeie o campo: ${f.label}`);
     }
+    setValidating(true);
+    try {
+      const r: ValidationReport = {
+        totalLinhas: rows.length,
+        reservasNovas: 0, reservasAtualizadas: 0, reservasDuplicadas: 0,
+        payoutsNovos: 0, payoutsDuplicados: 0,
+        adtNovos: 0, adtDuplicados: 0,
+        somaPayouts: 0, somaPayoutsSA7D: 0, somaPayoutsInvestidores: 0,
+        somaReservasBruto: 0,
+        imoveisDesconhecidos: [], errosLinhas: [], divergencias: [],
+        periodo: null,
+      };
+      const datasSet = new Set<string>();
+      const desconhecidos = new Set<string>();
+
+      // ── coleta agregada (mesma lógica do importar, mas sem inserir)
+      const aggReservas = new Map<string, { imovel_id: string; codigo: string; check_in: string; check_out: string; valor_bruto: number }>();
+      const payouts: { data: string; valor: number; recebedor: string; sa7d: boolean; codRef: string | null }[] = [];
+      const adts: { imovel_id: string; data: string; valor: number; sa7d: boolean }[] = [];
+
+      let curSA7D = false;
+      for (const row of rows) {
+        if (tipo === "extrato_completo") {
+          const tl = String(row[mapping.tipo_linha] ?? "").trim();
+          if (tl === "Payout") {
+            const data = parseDate(row[mapping.data]);
+            const pago = parseNum(row[mapping.pago]);
+            const info = String(row[mapping.informacoes] ?? "").trim();
+            const codRef = mapping.codigo_ref ? String(row[mapping.codigo_ref] ?? "").trim() || null : null;
+            curSA7D = isSA7D(info);
+            if (data && pago > 0) {
+              payouts.push({ data, valor: pago, recebedor: info, sa7d: curSA7D, codRef });
+              datasSet.add(data);
+            }
+          } else if (tl === "Reserva") {
+            const cod = extractCodigo(String(row[mapping.anuncio] ?? ""));
+            if (!cod) { r.errosLinhas.push("Linha sem código de imóvel"); continue; }
+            const im = codigoIndex.get(cod.toLowerCase());
+            if (!im) { desconhecidos.add(cod); continue; }
+            const ci = parseDate(row[mapping.check_in]); const co = parseDate(row[mapping.check_out]);
+            const dataPay = parseDate(row[mapping.data]);
+            const valor = parseNum(row[mapping.valor]);
+            if (!ci || !co || valor <= 0) { r.errosLinhas.push(`${cod}: data/valor inválido`); continue; }
+            const key = `${im.id}|${ci}|${co}`;
+            const ex = aggReservas.get(key);
+            if (ex) ex.valor_bruto += valor;
+            else aggReservas.set(key, { imovel_id: im.id, codigo: cod, check_in: ci, check_out: co, valor_bruto: valor });
+            if (im.investidor_id && dataPay) {
+              adts.push({ imovel_id: im.id, data: dataPay, valor, sa7d: curSA7D });
+              datasSet.add(dataPay);
+            }
+          }
+        } else {
+          const cod = extractCodigo(String(row[mapping.anuncio] ?? ""));
+          if (!cod) { r.errosLinhas.push("Linha sem código"); continue; }
+          const im = codigoIndex.get(cod.toLowerCase());
+          if (!im) { desconhecidos.add(cod); continue; }
+          if (tipo === "faturamento") {
+            const ci = parseDate(row[mapping.check_in]); const co = parseDate(row[mapping.check_out]);
+            const valor = parseNum(row[mapping.valor]);
+            if (!ci || !co || valor <= 0) { r.errosLinhas.push(`${cod}: dados inválidos`); continue; }
+            const key = `${im.id}|${ci}|${co}`;
+            const ex = aggReservas.get(key);
+            if (ex) ex.valor_bruto += valor;
+            else aggReservas.set(key, { imovel_id: im.id, codigo: cod, check_in: ci, check_out: co, valor_bruto: valor });
+          } else {
+            const data = parseDate(row[mapping.data]);
+            const valor = parseNum(row[mapping.valor]);
+            if (!data || valor <= 0 || !im.investidor_id) { r.errosLinhas.push(`${cod}: dados inválidos ou sem investidor`); continue; }
+            adts.push({ imovel_id: im.id, data, valor, sa7d: false });
+            datasSet.add(data);
+          }
+        }
+      }
+
+      r.imoveisDesconhecidos = [...desconhecidos];
+      r.somaPayouts = payouts.reduce((a, p) => a + p.valor, 0);
+      r.somaPayoutsSA7D = payouts.filter((p) => p.sa7d).reduce((a, p) => a + p.valor, 0);
+      r.somaPayoutsInvestidores = r.somaPayouts - r.somaPayoutsSA7D;
+      r.somaReservasBruto = [...aggReservas.values()].reduce((a, x) => a + x.valor_bruto, 0);
+
+      // ── período
+      const datas = [...datasSet].sort();
+      if (datas.length) r.periodo = { inicio: datas[0], fim: datas[datas.length - 1] };
+
+      // ── checa duplicatas/divergências de RESERVAS
+      const pendingRes = [...aggReservas.values()];
+      if (pendingRes.length) {
+        const imIds = [...new Set(pendingRes.map((x) => x.imovel_id))];
+        const cis = [...new Set(pendingRes.map((x) => x.check_in))];
+        const { data: existingR } = await supabase.from("reservas")
+          .select("imovel_id, check_in, check_out, valor_bruto")
+          .in("imovel_id", imIds).in("check_in", cis);
+        const exMap = new Map((existingR ?? []).map((x: any) => [`${x.imovel_id}|${x.check_in}|${x.check_out}`, x]));
+        for (const p of pendingRes) {
+          const ex = exMap.get(`${p.imovel_id}|${p.check_in}|${p.check_out}`);
+          if (!ex) r.reservasNovas++;
+          else if (Math.abs(Number(ex.valor_bruto) - p.valor_bruto) < 0.01) r.reservasDuplicadas++;
+          else {
+            r.reservasAtualizadas++;
+            r.divergencias.push({ codigo: p.codigo, check_in: p.check_in, antes: Number(ex.valor_bruto), depois: p.valor_bruto });
+          }
+        }
+      }
+
+      // ── checa duplicatas de PAYOUTS
+      if (payouts.length) {
+        const datasP = [...new Set(payouts.map((p) => p.data))];
+        const { data: existP } = await supabase.from("payouts")
+          .select("data, valor_pago, recebedor, codigo_referencia")
+          .in("data", datasP);
+        const exSet = new Set((existP ?? []).map((p: any) => `${p.data}|${Number(p.valor_pago).toFixed(2)}|${p.recebedor}|${p.codigo_referencia ?? ""}`));
+        for (const p of payouts) {
+          const k = `${p.data}|${p.valor.toFixed(2)}|${p.recebedor}|${p.codRef ?? ""}`;
+          if (exSet.has(k)) r.payoutsDuplicados++;
+          else { exSet.add(k); r.payoutsNovos++; }
+        }
+      }
+
+      // ── checa duplicatas de ADIANTAMENTOS
+      if (adts.length) {
+        const imIds = [...new Set(adts.map((a) => a.imovel_id))];
+        const datasA = [...new Set(adts.map((a) => a.data))];
+        const { data: existA } = await supabase.from("adiantamentos")
+          .select("imovel_id, data, valor").in("imovel_id", imIds).in("data", datasA);
+        const exSet = new Set((existA ?? []).map((a: any) => `${a.imovel_id}|${a.data}|${Number(a.valor).toFixed(2)}`));
+        for (const a of adts) {
+          const k = `${a.imovel_id}|${a.data}|${a.valor.toFixed(2)}`;
+          if (exSet.has(k)) r.adtDuplicados++;
+          else { exSet.add(k); r.adtNovos++; }
+        }
+      }
+
+      setReport(r);
+    } catch (e: any) {
+      toast.error(`Falha na validação: ${e?.message ?? e}`);
+    } finally {
+      setValidating(false);
+    }
+  }
+
+  async function importar() {
+    setImporting(true);
 
     let inseridos = 0, duplicados = 0, erros = 0;
     const errosDetalhe: string[] = [];
@@ -523,7 +690,9 @@ export default function Importar() {
         toast.warning(`Nenhuma linha inserida. ${erros} erros. Ex.: ${errosDetalhe.slice(0, 3).join(" | ")}`);
       }
       setRows([]); setHeaders([]); setMapping({}); setFilename(""); setWorkbook(null); setSheetNames([]); setActiveSheet("");
-      setFileKey((k) => k + 1); // reseta o <input file> para permitir reimportar o mesmo arquivo
+      setFileKey((k) => k + 1);
+      setReport(null);
+      setImporting(false);
       loadHistory();
     }
   }
@@ -585,7 +754,7 @@ export default function Importar() {
                     <CardHeader>
                       <CardTitle className="text-base flex items-center justify-between">
                         <span>3. Preview ({rows.length} linhas)</span>
-                        <Button onClick={importar}><FileSpreadsheet className="mr-2 h-4 w-4" />Confirmar importação</Button>
+                        <Button onClick={validar} disabled={validating}><FileSpreadsheet className="mr-2 h-4 w-4" />{validating ? "Validando..." : "Validar e revisar"}</Button>
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="p-0">
@@ -654,6 +823,116 @@ export default function Importar() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={!!report} onOpenChange={(o) => !o && setReport(null)}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {report && (report.imoveisDesconhecidos.length || report.errosLinhas.length || report.divergencias.length)
+                ? <ShieldAlert className="h-5 w-5 text-warning" />
+                : <ShieldCheck className="h-5 w-5 text-success" />}
+              Resumo da validação
+            </DialogTitle>
+            <DialogDescription>
+              {report?.periodo
+                ? `Período detectado: ${dateBR(report.periodo.inicio)} a ${dateBR(report.periodo.fim)}`
+                : "Revise os ajustes antes de confirmar a importação."}
+            </DialogDescription>
+          </DialogHeader>
+
+          {report && (
+            <div className="space-y-4 text-sm">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <div className="rounded-lg border p-3">
+                  <div className="text-xs text-muted-foreground">Total de linhas</div>
+                  <div className="text-lg font-semibold">{report.totalLinhas}</div>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <div className="text-xs text-muted-foreground">Faturamento (payouts)</div>
+                  <div className="text-lg font-semibold">{brl(report.somaPayouts)}</div>
+                  <div className="text-xs text-muted-foreground">SA7D: {brl(report.somaPayoutsSA7D)} · Inv: {brl(report.somaPayoutsInvestidores)}</div>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <div className="text-xs text-muted-foreground">Reservas (bruto)</div>
+                  <div className="text-lg font-semibold">{brl(report.somaReservasBruto)}</div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3 text-xs">
+                <div className="rounded-lg border p-3">
+                  <div className="font-medium mb-1">Reservas</div>
+                  <div className="text-success">+ {report.reservasNovas} novas</div>
+                  <div className="text-warning">~ {report.reservasAtualizadas} atualizadas</div>
+                  <div className="text-muted-foreground">= {report.reservasDuplicadas} duplicadas</div>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <div className="font-medium mb-1">Payouts</div>
+                  <div className="text-success">+ {report.payoutsNovos} novos</div>
+                  <div className="text-muted-foreground">= {report.payoutsDuplicados} duplicados</div>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <div className="font-medium mb-1">Adiantamentos</div>
+                  <div className="text-success">+ {report.adtNovos} novos</div>
+                  <div className="text-muted-foreground">= {report.adtDuplicados} duplicados</div>
+                </div>
+              </div>
+
+              {report.imoveisDesconhecidos.length > 0 && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Imóveis não cadastrados ({report.imoveisDesconhecidos.length})</AlertTitle>
+                  <AlertDescription className="text-xs">
+                    {report.imoveisDesconhecidos.slice(0, 20).join(", ")}
+                    {report.imoveisDesconhecidos.length > 20 && ` +${report.imoveisDesconhecidos.length - 20}`}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {report.divergencias.length > 0 && (
+                <div className="rounded-lg border">
+                  <div className="border-b bg-muted/30 p-2 text-xs font-medium">Divergências de valor ({report.divergencias.length})</div>
+                  <div className="max-h-40 overflow-y-auto">
+                    <Table>
+                      <TableHeader><TableRow>
+                        <TableHead>Imóvel</TableHead><TableHead>Check-in</TableHead>
+                        <TableHead className="num">Antes</TableHead><TableHead className="num">Depois</TableHead>
+                      </TableRow></TableHeader>
+                      <TableBody>
+                        {report.divergencias.slice(0, 30).map((d, i) => (
+                          <TableRow key={i}>
+                            <TableCell>{d.codigo}</TableCell>
+                            <TableCell>{dateBR(d.check_in)}</TableCell>
+                            <TableCell className="num">{brl(d.antes)}</TableCell>
+                            <TableCell className="num text-warning">{brl(d.depois)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )}
+
+              {report.errosLinhas.length > 0 && (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Linhas com problemas ({report.errosLinhas.length})</AlertTitle>
+                  <AlertDescription className="text-xs">
+                    {report.errosLinhas.slice(0, 5).join(" · ")}
+                    {report.errosLinhas.length > 5 && ` +${report.errosLinhas.length - 5}`}
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReport(null)} disabled={importing}>Cancelar</Button>
+            <Button onClick={importar} disabled={importing}>
+              {importing ? "Importando..." : "Confirmar importação"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

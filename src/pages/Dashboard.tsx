@@ -145,7 +145,9 @@ export default function Dashboard() {
     const adr = noites > 0 ? faturamento / noites : 0;
     const revpar = cap > 0 ? faturamento / cap : 0;
 
-    return { faturamento, lucro, ocupacao, adr, revpar, noites };
+    const adiantamentos = (ad.data ?? []).reduce((a, x: any) => a + Number(x.valor || 0), 0);
+
+    return { faturamento, lucro, ocupacao, adr, revpar, noites, adiantamentos };
   }
 
   async function loadAll() {

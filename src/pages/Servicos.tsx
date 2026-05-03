@@ -220,7 +220,7 @@ export default function Servicos() {
     if (!anexoCtx) return;
     await supabase.storage.from(BUCKET).remove([anexo.path]);
     const updated = anexoCtx.current.filter((a) => a.path !== anexo.path);
-    await supabase.from(anexoCtx.tabela).update({ anexos: updated }).eq("id", anexoCtx.id);
+    await (supabase.from(anexoCtx.tabela as any) as any).update({ anexos: updated }).eq("id", anexoCtx.id);
     setAnexoCtx({ ...anexoCtx, current: updated });
     if (anexoCtx.tabela === "servicos_operacionais") loadServ(); else loadMan();
   }
@@ -231,7 +231,7 @@ export default function Servicos() {
     const pasta = `${anexoCtx.tabela === "servicos_operacionais" ? "servicos" : "manutencoes"}/${anexoCtx.id}`;
     const novos = await uploadFiles(Array.from(files), pasta);
     const merged = [...anexoCtx.current, ...novos];
-    await supabase.from(anexoCtx.tabela).update({ anexos: merged }).eq("id", anexoCtx.id);
+    await (supabase.from(anexoCtx.tabela as any) as any).update({ anexos: merged }).eq("id", anexoCtx.id);
     setAnexoCtx({ ...anexoCtx, current: merged });
     setUploading(false);
     if (anexoCtx.tabela === "servicos_operacionais") loadServ(); else loadMan();

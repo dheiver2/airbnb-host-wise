@@ -67,7 +67,7 @@ export default function Parametros() {
                   <Label>Imóvel</Label>
                   <Combobox
                     clearable
-                    placeholder="Geral (todos)"
+                    placeholder="Todos"
                     className="w-full sm:w-full"
                     options={imoveis.map((i) => ({ value: i.id, label: i.codigo, hint: i.endereco }))}
                     value={editing?.imovel_id ?? ""}

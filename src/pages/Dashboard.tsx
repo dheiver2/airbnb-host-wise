@@ -18,16 +18,18 @@ type Stats = {
   adr: number;
   revpar: number;
   noites: number;
+  adiantamentos: number;
   momFaturamento: number;
   momLucro: number;
   momOcupacao: number;
   momAdr: number;
+  momAdiantamentos: number;
 };
 
 const ZERO: Stats = {
   faturamento: 0, lucro: 0, imoveis: 0, ocupacao: 0,
-  adr: 0, revpar: 0, noites: 0,
-  momFaturamento: 0, momLucro: 0, momOcupacao: 0, momAdr: 0,
+  adr: 0, revpar: 0, noites: 0, adiantamentos: 0,
+  momFaturamento: 0, momLucro: 0, momOcupacao: 0, momAdr: 0, momAdiantamentos: 0,
 };
 
 // Total de dias em um intervalo (inclusive)

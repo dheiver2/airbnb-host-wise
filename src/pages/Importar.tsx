@@ -754,7 +754,7 @@ export default function Importar() {
                     <CardHeader>
                       <CardTitle className="text-base flex items-center justify-between">
                         <span>3. Preview ({rows.length} linhas)</span>
-                        <Button onClick={importar}><FileSpreadsheet className="mr-2 h-4 w-4" />Confirmar importação</Button>
+                        <Button onClick={validar} disabled={validating}><FileSpreadsheet className="mr-2 h-4 w-4" />{validating ? "Validando..." : "Validar e revisar"}</Button>
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="p-0">

@@ -83,9 +83,27 @@ export default function Parametros() {
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5"><Label>Custo</Label><Input type="number" step="0.01" value={editing?.custo ?? 0} onChange={(e) => setEditing({ ...editing, custo: e.target.value })} /></div>
-                  <div className="space-y-1.5"><Label>Valor cobrado</Label><Input type="number" step="0.01" value={editing?.valor_cobrado ?? 0} onChange={(e) => setEditing({ ...editing, valor_cobrado: e.target.value })} /></div>
+                  <div className="space-y-1.5"><Label>Custo {isLavanderia && <span className="text-muted-foreground text-xs">(base)</span>}</Label><Input type="number" step="0.01" value={editing?.custo ?? 0} onChange={(e) => setEditing({ ...editing, custo: e.target.value })} /></div>
+                  <div className="space-y-1.5"><Label>Valor cobrado {isLavanderia && <span className="text-muted-foreground text-xs">(base)</span>}</Label><Input type="number" step="0.01" value={editing?.valor_cobrado ?? 0} onChange={(e) => setEditing({ ...editing, valor_cobrado: e.target.value })} /></div>
                 </div>
+                {isLavanderia && (
+                  <div className="space-y-2 rounded-md border p-3">
+                    <Label className="text-sm">Faixas por nº de hóspedes</Label>
+                    <div className="grid grid-cols-[60px_1fr_1fr] gap-2 text-xs text-muted-foreground">
+                      <span>Hósp.</span><span>Custo</span><span>Cobrado</span>
+                    </div>
+                    {["1","2","3","4+"].map((k) => {
+                      const f = editing?.faixas_hospedes?.[k] ?? {};
+                      return (
+                        <div key={k} className="grid grid-cols-[60px_1fr_1fr] gap-2 items-center">
+                          <span className="text-sm font-medium">{k}</span>
+                          <Input type="number" step="0.01" value={f.custo ?? ""} onChange={(e) => setEditing({ ...editing, faixas_hospedes: { ...(editing?.faixas_hospedes ?? {}), [k]: { ...f, custo: e.target.value } } })} />
+                          <Input type="number" step="0.01" value={f.valor_cobrado ?? ""} onChange={(e) => setEditing({ ...editing, faixas_hospedes: { ...(editing?.faixas_hospedes ?? {}), [k]: { ...f, valor_cobrado: e.target.value } } })} />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
                 <div className="flex items-center gap-2"><Switch checked={editing?.ativo ?? true} onCheckedChange={(v) => setEditing({ ...editing, ativo: v })} /><Label>Ativo</Label></div>
               </div>
               <DialogFooter><Button onClick={save}>Salvar</Button></DialogFooter>

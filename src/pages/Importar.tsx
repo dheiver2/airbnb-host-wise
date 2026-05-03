@@ -113,15 +113,19 @@ export default function Importar() {
   function applyAutoMapping(hs: string[], t: Tipo) {
     const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
     const matchers: Record<string, string[]> = {
+      tipo_linha: ["tipo"],
+      informacoes: ["informacoes", "informacao"],
       anuncio: ["anuncio", "rotulosdelinha", "imovel"],
       check_in: ["datadeinicio", "checkin", "inicio"],
       check_out: ["datadetermino", "checkout", "termino", "fim"],
       hospedes: ["hospede", "hospedes"],
       noites: ["noites", "diarias"],
       valor: ["ganhosbrutos", "valorbruto", "somadevalor", "total", "valor"],
+      pago: ["pago"],
       taxa: ["taxadeservico", "taxadoanfitriao", "taxa", "servicefee", "hostfee"],
       valor_liq: ["valorliquido", "liquido", "netliquido", "payout"],
       data: ["data", "datapagamento"],
+      codigo_ref: ["codigodereferencia", "referencia"],
     };
     const auto: Record<string, string> = {};
     FIELD_OPTIONS[t].forEach((f) => {

@@ -174,10 +174,12 @@ export default function Dashboard() {
       adr: cur.adr,
       revpar: cur.revpar,
       noites: cur.noites,
+      adiantamentos: cur.adiantamentos,
       momFaturamento: mom(cur.faturamento, prev.faturamento),
       momLucro: mom(cur.lucro, prev.lucro),
       momOcupacao: cur.ocupacao - prev.ocupacao,
       momAdr: mom(cur.adr, prev.adr),
+      momAdiantamentos: mom(cur.adiantamentos, prev.adiantamentos),
     });
 
     // Top 5 imóveis no período selecionado

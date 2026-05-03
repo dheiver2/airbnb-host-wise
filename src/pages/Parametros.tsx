@@ -63,6 +63,16 @@ export default function Parametros() {
               <div className="grid gap-3">
                 <div className="space-y-1.5"><Label>Nome *</Label><Input value={editing?.nome ?? ""} onChange={(e) => setEditing({ ...editing, nome: e.target.value })} /></div>
                 <div className="space-y-1.5"><Label>Categoria</Label><Input placeholder="ex: Hidráulica, Elétrica..." value={editing?.categoria ?? ""} onChange={(e) => setEditing({ ...editing, categoria: e.target.value })} /></div>
+                <div className="space-y-1.5">
+                  <Label>Imóvel</Label>
+                  <Combobox
+                    clearable
+                    placeholder="Geral (todos)"
+                    options={imoveis.map((i) => ({ value: i.id, label: i.codigo, hint: i.endereco }))}
+                    value={editing?.imovel_id ?? ""}
+                    onChange={(v) => setEditing({ ...editing, imovel_id: v })}
+                  />
+                </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5"><Label>Custo</Label><Input type="number" step="0.01" value={editing?.custo ?? 0} onChange={(e) => setEditing({ ...editing, custo: e.target.value })} /></div>
                   <div className="space-y-1.5"><Label>Valor cobrado</Label><Input type="number" step="0.01" value={editing?.valor_cobrado ?? 0} onChange={(e) => setEditing({ ...editing, valor_cobrado: e.target.value })} /></div>

@@ -534,11 +534,12 @@ export default function Importar() {
       <div className="space-y-4 p-6">
         <Tabs value={tipo} onValueChange={(v) => { setTipo(v as Tipo); setRows([]); setHeaders([]); setMapping({}); setWorkbook(null); setSheetNames([]); }}>
           <TabsList>
-            <TabsTrigger value="faturamento">Faturamento (Base Total)</TabsTrigger>
-            <TabsTrigger value="adiantamentos">Adiantamentos pagos</TabsTrigger>
+            <TabsTrigger value="extrato_completo">Extrato Airbnb (CSV completo)</TabsTrigger>
+            <TabsTrigger value="faturamento">Faturamento (legado)</TabsTrigger>
+            <TabsTrigger value="adiantamentos">Adiantamentos (legado)</TabsTrigger>
           </TabsList>
 
-          {(["faturamento", "adiantamentos"] as Tipo[]).map((t) => (
+          {(["extrato_completo", "faturamento", "adiantamentos"] as Tipo[]).map((t) => (
             <TabsContent key={t} value={t} className="space-y-4">
               <Card className="shadow-card">
                 <CardHeader><CardTitle className="text-base">1. Selecione o arquivo (.csv ou .xlsx)</CardTitle></CardHeader>

@@ -197,7 +197,8 @@ export default function Importar() {
         valor_bruto: number; taxas_airbnb: number; valor_liquido: number;
         mes_competencia: string; codigo_airbnb: string | null;
       };
-      const pending: PendingReserva[] = [];
+      // Agrega múltiplas linhas da mesma reserva (Airbnb pode quebrar 1 reserva em vários lançamentos)
+      const aggMap = new Map<string, PendingReserva>();
 
       for (const row of rows) {
         const anuncio = row[mapping.anuncio];
@@ -214,31 +215,44 @@ export default function Importar() {
         const valorLiqRaw = mapping.valor_liq ? parseNum(row[mapping.valor_liq]) : 0;
         const valorLiquido = valorLiqRaw > 0 ? valorLiqRaw : valor - taxa;
         const hospede = mapping.hospedes ? String(row[mapping.hospedes] ?? "").trim() : "";
-        pending.push({
-          imovel_id: im.id, check_in: checkIn, check_out: checkOut,
-          valor_bruto: valor, taxas_airbnb: taxa, valor_liquido: valorLiquido,
-          mes_competencia: `${checkOut.slice(0, 7)}-01`,
-          codigo_airbnb: hospede ? hospede.slice(0, 60) : null,
-        });
+        const key = `${im.id}|${checkIn}|${checkOut}`;
+        const ex = aggMap.get(key);
+        if (ex) {
+          ex.valor_bruto += valor;
+          ex.taxas_airbnb += taxa;
+          ex.valor_liquido += valorLiquido;
+        } else {
+          aggMap.set(key, {
+            imovel_id: im.id, check_in: checkIn, check_out: checkOut,
+            valor_bruto: valor, taxas_airbnb: taxa, valor_liquido: valorLiquido,
+            mes_competencia: `${checkOut.slice(0, 7)}-01`,
+            codigo_airbnb: hospede ? hospede.slice(0, 60) : null,
+          });
+        }
       }
+      const pending: PendingReserva[] = Array.from(aggMap.values());
 
       if (pending.length > 0) {
-        // dedupe em lote: 1 query para buscar reservas já existentes
+        // dedupe: busca reservas existentes pelas mesmas chaves (imovel, check_in, check_out)
         const imovelIds = [...new Set(pending.map((r) => r.imovel_id))];
         const checkIns = [...new Set(pending.map((r) => r.check_in))];
         const { data: existing } = await supabase.from("reservas")
-          .select("imovel_id, check_in, check_out, valor_bruto")
+          .select("id, imovel_id, check_in, check_out, valor_bruto")
           .in("imovel_id", imovelIds).in("check_in", checkIns);
-        const existingSet = new Set(
-          (existing ?? []).map((r) => `${r.imovel_id}|${r.check_in}|${r.check_out}|${r.valor_bruto}`)
+        const existingMap = new Map(
+          (existing ?? []).map((r) => [`${r.imovel_id}|${r.check_in}|${r.check_out}`, r])
         );
 
         const toInsert: PendingReserva[] = [];
+        const toUpdate: { id: string; r: PendingReserva }[] = [];
         for (const r of pending) {
-          if (existingSet.has(`${r.imovel_id}|${r.check_in}|${r.check_out}|${r.valor_bruto}`)) {
+          const ex = existingMap.get(`${r.imovel_id}|${r.check_in}|${r.check_out}`);
+          if (!ex) {
+            toInsert.push(r);
+          } else if (Math.abs(Number(ex.valor_bruto) - r.valor_bruto) < 0.01) {
             duplicados++;
           } else {
-            toInsert.push(r);
+            toUpdate.push({ id: ex.id, r });
           }
         }
 
@@ -256,8 +270,16 @@ export default function Importar() {
             inseridos += chunk.length;
           }
         }
+
+        // UPDATE valores divergentes (mesma reserva, valor mudou)
+        for (const u of toUpdate) {
+          const { error } = await supabase.from("reservas")
+            .update({ valor_bruto: u.r.valor_bruto, taxas_airbnb: u.r.taxas_airbnb, valor_liquido: u.r.valor_liquido })
+            .eq("id", u.id);
+          if (error) { erros++; if (errosDetalhe.length < 5) errosDetalhe.push(error.message); }
+          else inseridos++;
+        }
       }
-    } else {
       // ── Adiantamentos: parse → dedupe em lote → batch insert ──
       type PendingAdt = {
         investidor_id: string; imovel_id: string;

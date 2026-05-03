@@ -99,7 +99,7 @@ export default function Servicos() {
       .select("id, codigo, valor_faxina, custo_faxina, valor_lavanderia, custo_lavanderia")
       .eq("status", "ativo").order("codigo")
       .then(({ data }) => setImoveis(data ?? []));
-    supabase.from("parametros_servico").select("*").eq("ativo", true).order("nome")
+    supabase.from("parametros_servico").select("*, imoveis(codigo)").eq("ativo", true).order("nome")
       .then(({ data }) => setParams(data ?? []));
   }, []);
 

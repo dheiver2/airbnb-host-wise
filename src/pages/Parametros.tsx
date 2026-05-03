@@ -11,24 +11,31 @@ import { Switch } from "@/components/ui/switch";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { brl } from "@/lib/format";
+import { Combobox } from "@/components/Combobox";
 
 export default function Parametros() {
   const [list, setList] = useState<any[]>([]);
+  const [imoveis, setImoveis] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
 
   useEffect(() => { load(); }, []);
   async function load() {
-    const { data } = await supabase.from("parametros_servico").select("*").order("nome");
+    const [{ data }, { data: im }] = await Promise.all([
+      supabase.from("parametros_servico").select("*, imoveis(codigo)").order("nome"),
+      supabase.from("imoveis").select("id, codigo, endereco").order("codigo"),
+    ]);
     setList(data ?? []);
+    setImoveis(im ?? []);
   }
 
   async function save() {
     if (!editing?.nome) return toast.error("Nome obrigatório");
-    const payload = {
+    const payload: any = {
       nome: editing.nome, categoria: editing.categoria,
       custo: Number(editing.custo ?? 0), valor_cobrado: Number(editing.valor_cobrado ?? 0),
       ativo: editing.ativo ?? true,
+      imovel_id: editing.imovel_id || null,
     };
     const res = editing.id ? await supabase.from("parametros_servico").update(payload).eq("id", editing.id) : await supabase.from("parametros_servico").insert(payload);
     if (res.error) return toast.error(res.error.message);

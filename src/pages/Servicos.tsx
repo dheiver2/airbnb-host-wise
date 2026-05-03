@@ -268,10 +268,10 @@ export default function Servicos() {
                         <Select value={formServ.parametro_id ?? ""} onValueChange={selectParamServ}>
                           <SelectTrigger><SelectValue placeholder="Opcional — preenche custo, valor e tipo" /></SelectTrigger>
                           <SelectContent>
-                            {params.map((p) => (
+                            {paramsForImovel(formServ.imovel_id).map((p) => (
                               <SelectItem key={p.id} value={p.id}>
                                 {p.nome}
-                                {p.categoria ? ` · ${p.categoria}` : ""}
+                                {p.imoveis?.codigo ? ` · ${p.imoveis.codigo}` : p.categoria ? ` · ${p.categoria}` : ""}
                                 {` — ${brl(p.custo)} / ${brl(p.valor_cobrado)}`}
                               </SelectItem>
                             ))}

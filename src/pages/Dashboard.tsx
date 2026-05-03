@@ -106,12 +106,19 @@ export default function Dashboard() {
     const { start } = monthRange(iniYm);
     const { end } = monthRange(fimYm);
 
+    // Período de fechamento das BASES (reservas/adiantamentos): dia 2 do mês inicial até dia 1 do mês seguinte ao final
+    const ini = monthDate(iniYm);
+    const fim = monthDate(fimYm);
+    const toIso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const baseStart = toIso(new Date(ini.getFullYear(), ini.getMonth(), 2));
+    const baseEnd = toIso(new Date(fim.getFullYear(), fim.getMonth() + 1, 1));
+
     const [r, s, m, c, ad] = await Promise.all([
-      supabase.from("reservas").select("valor_bruto, check_in, check_out, imovel_id").gte("mes_competencia", start).lte("mes_competencia", end),
+      supabase.from("reservas").select("valor_bruto, check_in, check_out, imovel_id").gte("check_in", baseStart).lte("check_in", baseEnd),
       supabase.from("servicos_operacionais").select("custo_real, valor_cobrado, tipo").gte("mes_competencia", start).lte("mes_competencia", end),
       supabase.from("manutencoes").select("custo, valor_cobrado, rateio").gte("mes_competencia", start).lte("mes_competencia", end),
       supabase.from("custos_fixos").select("valor").gte("mes_competencia", start).lte("mes_competencia", end),
-      supabase.from("adiantamentos").select("valor").gte("mes_competencia", start).lte("mes_competencia", end),
+      supabase.from("adiantamentos").select("valor").gte("data", baseStart).lte("data", baseEnd),
     ]);
 
     const reservas = r.data ?? [];

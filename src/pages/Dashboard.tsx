@@ -286,7 +286,7 @@ export default function Dashboard() {
           ))}
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {performance.map((c) => (
             <Card key={c.label} className="shadow-card">
               <CardContent className="flex items-start justify-between p-5">

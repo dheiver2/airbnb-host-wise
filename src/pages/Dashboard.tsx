@@ -106,12 +106,19 @@ export default function Dashboard() {
     const { start } = monthRange(iniYm);
     const { end } = monthRange(fimYm);
 
+    // Período de fechamento das BASES (reservas/adiantamentos): dia 2 do mês inicial até dia 1 do mês seguinte ao final
+    const ini = monthDate(iniYm);
+    const fim = monthDate(fimYm);
+    const toIso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const baseStart = toIso(new Date(ini.getFullYear(), ini.getMonth(), 2));
+    const baseEnd = toIso(new Date(fim.getFullYear(), fim.getMonth() + 1, 1));
+
     const [r, s, m, c, ad] = await Promise.all([
-      supabase.from("reservas").select("valor_bruto, check_in, check_out, imovel_id").gte("mes_competencia", start).lte("mes_competencia", end),
+      supabase.from("reservas").select("valor_bruto, check_in, check_out, imovel_id").gte("check_in", baseStart).lte("check_in", baseEnd),
       supabase.from("servicos_operacionais").select("custo_real, valor_cobrado, tipo").gte("mes_competencia", start).lte("mes_competencia", end),
       supabase.from("manutencoes").select("custo, valor_cobrado, rateio").gte("mes_competencia", start).lte("mes_competencia", end),
       supabase.from("custos_fixos").select("valor").gte("mes_competencia", start).lte("mes_competencia", end),
-      supabase.from("adiantamentos").select("valor").gte("mes_competencia", start).lte("mes_competencia", end),
+      supabase.from("adiantamentos").select("valor").gte("data", baseStart).lte("data", baseEnd),
     ]);
 
     const reservas = r.data ?? [];
@@ -182,10 +189,13 @@ export default function Dashboard() {
       momAdiantamentos: mom(cur.adiantamentos, prev.adiantamentos),
     });
 
-    // Top 5 imóveis no período selecionado
-    const { start, end } = monthRange(mesIni);
-    const { end: endFim } = monthRange(mesFim);
-    const { data: rTop } = await supabase.from("reservas").select("valor_bruto, imovel_id").gte("mes_competencia", start).lte("mes_competencia", endFim);
+    // Top 5 imóveis no período selecionado (base: dia 2 → dia 1 mês seguinte, por check_in)
+    const toIsoDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const iniDt = monthDate(mesIni);
+    const fimDt = monthDate(mesFim);
+    const topStart = toIsoDate(new Date(iniDt.getFullYear(), iniDt.getMonth(), 2));
+    const topEnd = toIsoDate(new Date(fimDt.getFullYear(), fimDt.getMonth() + 1, 1));
+    const { data: rTop } = await supabase.from("reservas").select("valor_bruto, imovel_id").gte("check_in", topStart).lte("check_in", topEnd);
     const map: Record<string, number> = {};
     (rTop ?? []).forEach((r: any) => { map[r.imovel_id] = (map[r.imovel_id] || 0) + Number(r.valor_bruto || 0); });
     setTopImoveis(
@@ -194,16 +204,16 @@ export default function Dashboard() {
         .sort((a, b) => b.valor - a.valor).slice(0, 5)
     );
 
-    // Evolução: 12 meses terminando em mesFim
+    // Evolução: 12 meses terminando em mesFim (cada barra: dia 2 → dia 1 do mês seguinte)
     const labels: string[] = [];
     const promises: Promise<any>[] = [];
     const fim = monthDate(mesFim);
     for (let i = 11; i >= 0; i--) {
       const d = new Date(fim.getFullYear(), fim.getMonth() - i, 1);
-      const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-      const { start: s, end: e } = monthRange(ym);
+      const s = toIsoDate(new Date(d.getFullYear(), d.getMonth(), 2));
+      const e = toIsoDate(new Date(d.getFullYear(), d.getMonth() + 1, 1));
       labels.push(d.toLocaleDateString("pt-BR", { month: "short" }));
-      promises.push(supabase.from("reservas").select("valor_bruto").gte("mes_competencia", s).lte("mes_competencia", e) as unknown as Promise<any>);
+      promises.push(supabase.from("reservas").select("valor_bruto").gte("check_in", s).lte("check_in", e) as unknown as Promise<any>);
     }
     const results = await Promise.all(promises);
     setEvolucao(results.map((res, idx) => ({

@@ -823,6 +823,116 @@ export default function Importar() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={!!report} onOpenChange={(o) => !o && setReport(null)}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {report && (report.imoveisDesconhecidos.length || report.errosLinhas.length || report.divergencias.length)
+                ? <ShieldAlert className="h-5 w-5 text-warning" />
+                : <ShieldCheck className="h-5 w-5 text-success" />}
+              Resumo da validação
+            </DialogTitle>
+            <DialogDescription>
+              {report?.periodo
+                ? `Período detectado: ${dateBR(report.periodo.inicio)} a ${dateBR(report.periodo.fim)}`
+                : "Revise os ajustes antes de confirmar a importação."}
+            </DialogDescription>
+          </DialogHeader>
+
+          {report && (
+            <div className="space-y-4 text-sm">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <div className="rounded-lg border p-3">
+                  <div className="text-xs text-muted-foreground">Total de linhas</div>
+                  <div className="text-lg font-semibold">{report.totalLinhas}</div>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <div className="text-xs text-muted-foreground">Faturamento (payouts)</div>
+                  <div className="text-lg font-semibold">{brl(report.somaPayouts)}</div>
+                  <div className="text-xs text-muted-foreground">SA7D: {brl(report.somaPayoutsSA7D)} · Inv: {brl(report.somaPayoutsInvestidores)}</div>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <div className="text-xs text-muted-foreground">Reservas (bruto)</div>
+                  <div className="text-lg font-semibold">{brl(report.somaReservasBruto)}</div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3 text-xs">
+                <div className="rounded-lg border p-3">
+                  <div className="font-medium mb-1">Reservas</div>
+                  <div className="text-success">+ {report.reservasNovas} novas</div>
+                  <div className="text-warning">~ {report.reservasAtualizadas} atualizadas</div>
+                  <div className="text-muted-foreground">= {report.reservasDuplicadas} duplicadas</div>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <div className="font-medium mb-1">Payouts</div>
+                  <div className="text-success">+ {report.payoutsNovos} novos</div>
+                  <div className="text-muted-foreground">= {report.payoutsDuplicados} duplicados</div>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <div className="font-medium mb-1">Adiantamentos</div>
+                  <div className="text-success">+ {report.adtNovos} novos</div>
+                  <div className="text-muted-foreground">= {report.adtDuplicados} duplicados</div>
+                </div>
+              </div>
+
+              {report.imoveisDesconhecidos.length > 0 && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Imóveis não cadastrados ({report.imoveisDesconhecidos.length})</AlertTitle>
+                  <AlertDescription className="text-xs">
+                    {report.imoveisDesconhecidos.slice(0, 20).join(", ")}
+                    {report.imoveisDesconhecidos.length > 20 && ` +${report.imoveisDesconhecidos.length - 20}`}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {report.divergencias.length > 0 && (
+                <div className="rounded-lg border">
+                  <div className="border-b bg-muted/30 p-2 text-xs font-medium">Divergências de valor ({report.divergencias.length})</div>
+                  <div className="max-h-40 overflow-y-auto">
+                    <Table>
+                      <TableHeader><TableRow>
+                        <TableHead>Imóvel</TableHead><TableHead>Check-in</TableHead>
+                        <TableHead className="num">Antes</TableHead><TableHead className="num">Depois</TableHead>
+                      </TableRow></TableHeader>
+                      <TableBody>
+                        {report.divergencias.slice(0, 30).map((d, i) => (
+                          <TableRow key={i}>
+                            <TableCell>{d.codigo}</TableCell>
+                            <TableCell>{dateBR(d.check_in)}</TableCell>
+                            <TableCell className="num">{brl(d.antes)}</TableCell>
+                            <TableCell className="num text-warning">{brl(d.depois)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )}
+
+              {report.errosLinhas.length > 0 && (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Linhas com problemas ({report.errosLinhas.length})</AlertTitle>
+                  <AlertDescription className="text-xs">
+                    {report.errosLinhas.slice(0, 5).join(" · ")}
+                    {report.errosLinhas.length > 5 && ` +${report.errosLinhas.length - 5}`}
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReport(null)} disabled={importing}>Cancelar</Button>
+            <Button onClick={importar} disabled={importing}>
+              {importing ? "Importando..." : "Confirmar importação"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

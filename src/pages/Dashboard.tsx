@@ -106,11 +106,12 @@ export default function Dashboard() {
     const { start } = monthRange(iniYm);
     const { end } = monthRange(fimYm);
 
-    const [r, s, m, c] = await Promise.all([
+    const [r, s, m, c, ad] = await Promise.all([
       supabase.from("reservas").select("valor_bruto, check_in, check_out, imovel_id").gte("mes_competencia", start).lte("mes_competencia", end),
       supabase.from("servicos_operacionais").select("custo_real, valor_cobrado, tipo").gte("mes_competencia", start).lte("mes_competencia", end),
       supabase.from("manutencoes").select("custo, valor_cobrado, rateio").gte("mes_competencia", start).lte("mes_competencia", end),
       supabase.from("custos_fixos").select("valor").gte("mes_competencia", start).lte("mes_competencia", end),
+      supabase.from("adiantamentos").select("valor").gte("mes_competencia", start).lte("mes_competencia", end),
     ]);
 
     const reservas = r.data ?? [];

@@ -88,7 +88,7 @@ function parseNum(v: any): number {
 }
 
 export default function Importar() {
-  const [tipo, setTipo] = useState<Tipo>("faturamento");
+  const [tipo, setTipo] = useState<Tipo>("extrato_completo");
   const [rows, setRows] = useState<any[]>([]);
   const [headers, setHeaders] = useState<string[]>([]);
   const [mapping, setMapping] = useState<Record<string, string>>({});

@@ -223,12 +223,155 @@ export default function Importar() {
     return m;
   }, [imoveis]);
 
-  async function importar() {
+  async function validar() {
     if (rows.length === 0) return toast.error("Carregue um arquivo");
     const required = FIELD_OPTIONS[tipo].filter((f) => f.required);
     for (const f of required) {
       if (!mapping[f.key]) return toast.error(`Mapeie o campo: ${f.label}`);
     }
+    setValidating(true);
+    try {
+      const r: ValidationReport = {
+        totalLinhas: rows.length,
+        reservasNovas: 0, reservasAtualizadas: 0, reservasDuplicadas: 0,
+        payoutsNovos: 0, payoutsDuplicados: 0,
+        adtNovos: 0, adtDuplicados: 0,
+        somaPayouts: 0, somaPayoutsSA7D: 0, somaPayoutsInvestidores: 0,
+        somaReservasBruto: 0,
+        imoveisDesconhecidos: [], errosLinhas: [], divergencias: [],
+        periodo: null,
+      };
+      const datasSet = new Set<string>();
+      const desconhecidos = new Set<string>();
+
+      // ── coleta agregada (mesma lógica do importar, mas sem inserir)
+      const aggReservas = new Map<string, { imovel_id: string; codigo: string; check_in: string; check_out: string; valor_bruto: number }>();
+      const payouts: { data: string; valor: number; recebedor: string; sa7d: boolean; codRef: string | null }[] = [];
+      const adts: { imovel_id: string; data: string; valor: number; sa7d: boolean }[] = [];
+
+      let curSA7D = false;
+      for (const row of rows) {
+        if (tipo === "extrato_completo") {
+          const tl = String(row[mapping.tipo_linha] ?? "").trim();
+          if (tl === "Payout") {
+            const data = parseDate(row[mapping.data]);
+            const pago = parseNum(row[mapping.pago]);
+            const info = String(row[mapping.informacoes] ?? "").trim();
+            const codRef = mapping.codigo_ref ? String(row[mapping.codigo_ref] ?? "").trim() || null : null;
+            curSA7D = isSA7D(info);
+            if (data && pago > 0) {
+              payouts.push({ data, valor: pago, recebedor: info, sa7d: curSA7D, codRef });
+              datasSet.add(data);
+            }
+          } else if (tl === "Reserva") {
+            const cod = extractCodigo(String(row[mapping.anuncio] ?? ""));
+            if (!cod) { r.errosLinhas.push("Linha sem código de imóvel"); continue; }
+            const im = codigoIndex.get(cod.toLowerCase());
+            if (!im) { desconhecidos.add(cod); continue; }
+            const ci = parseDate(row[mapping.check_in]); const co = parseDate(row[mapping.check_out]);
+            const dataPay = parseDate(row[mapping.data]);
+            const valor = parseNum(row[mapping.valor]);
+            if (!ci || !co || valor <= 0) { r.errosLinhas.push(`${cod}: data/valor inválido`); continue; }
+            const key = `${im.id}|${ci}|${co}`;
+            const ex = aggReservas.get(key);
+            if (ex) ex.valor_bruto += valor;
+            else aggReservas.set(key, { imovel_id: im.id, codigo: cod, check_in: ci, check_out: co, valor_bruto: valor });
+            if (im.investidor_id && dataPay) {
+              adts.push({ imovel_id: im.id, data: dataPay, valor, sa7d: curSA7D });
+              datasSet.add(dataPay);
+            }
+          }
+        } else {
+          const cod = extractCodigo(String(row[mapping.anuncio] ?? ""));
+          if (!cod) { r.errosLinhas.push("Linha sem código"); continue; }
+          const im = codigoIndex.get(cod.toLowerCase());
+          if (!im) { desconhecidos.add(cod); continue; }
+          if (tipo === "faturamento") {
+            const ci = parseDate(row[mapping.check_in]); const co = parseDate(row[mapping.check_out]);
+            const valor = parseNum(row[mapping.valor]);
+            if (!ci || !co || valor <= 0) { r.errosLinhas.push(`${cod}: dados inválidos`); continue; }
+            const key = `${im.id}|${ci}|${co}`;
+            const ex = aggReservas.get(key);
+            if (ex) ex.valor_bruto += valor;
+            else aggReservas.set(key, { imovel_id: im.id, codigo: cod, check_in: ci, check_out: co, valor_bruto: valor });
+          } else {
+            const data = parseDate(row[mapping.data]);
+            const valor = parseNum(row[mapping.valor]);
+            if (!data || valor <= 0 || !im.investidor_id) { r.errosLinhas.push(`${cod}: dados inválidos ou sem investidor`); continue; }
+            adts.push({ imovel_id: im.id, data, valor, sa7d: false });
+            datasSet.add(data);
+          }
+        }
+      }
+
+      r.imoveisDesconhecidos = [...desconhecidos];
+      r.somaPayouts = payouts.reduce((a, p) => a + p.valor, 0);
+      r.somaPayoutsSA7D = payouts.filter((p) => p.sa7d).reduce((a, p) => a + p.valor, 0);
+      r.somaPayoutsInvestidores = r.somaPayouts - r.somaPayoutsSA7D;
+      r.somaReservasBruto = [...aggReservas.values()].reduce((a, x) => a + x.valor_bruto, 0);
+
+      // ── período
+      const datas = [...datasSet].sort();
+      if (datas.length) r.periodo = { inicio: datas[0], fim: datas[datas.length - 1] };
+
+      // ── checa duplicatas/divergências de RESERVAS
+      const pendingRes = [...aggReservas.values()];
+      if (pendingRes.length) {
+        const imIds = [...new Set(pendingRes.map((x) => x.imovel_id))];
+        const cis = [...new Set(pendingRes.map((x) => x.check_in))];
+        const { data: existingR } = await supabase.from("reservas")
+          .select("imovel_id, check_in, check_out, valor_bruto")
+          .in("imovel_id", imIds).in("check_in", cis);
+        const exMap = new Map((existingR ?? []).map((x: any) => [`${x.imovel_id}|${x.check_in}|${x.check_out}`, x]));
+        for (const p of pendingRes) {
+          const ex = exMap.get(`${p.imovel_id}|${p.check_in}|${p.check_out}`);
+          if (!ex) r.reservasNovas++;
+          else if (Math.abs(Number(ex.valor_bruto) - p.valor_bruto) < 0.01) r.reservasDuplicadas++;
+          else {
+            r.reservasAtualizadas++;
+            r.divergencias.push({ codigo: p.codigo, check_in: p.check_in, antes: Number(ex.valor_bruto), depois: p.valor_bruto });
+          }
+        }
+      }
+
+      // ── checa duplicatas de PAYOUTS
+      if (payouts.length) {
+        const datasP = [...new Set(payouts.map((p) => p.data))];
+        const { data: existP } = await supabase.from("payouts")
+          .select("data, valor_pago, recebedor, codigo_referencia")
+          .in("data", datasP);
+        const exSet = new Set((existP ?? []).map((p: any) => `${p.data}|${Number(p.valor_pago).toFixed(2)}|${p.recebedor}|${p.codigo_referencia ?? ""}`));
+        for (const p of payouts) {
+          const k = `${p.data}|${p.valor.toFixed(2)}|${p.recebedor}|${p.codRef ?? ""}`;
+          if (exSet.has(k)) r.payoutsDuplicados++;
+          else { exSet.add(k); r.payoutsNovos++; }
+        }
+      }
+
+      // ── checa duplicatas de ADIANTAMENTOS
+      if (adts.length) {
+        const imIds = [...new Set(adts.map((a) => a.imovel_id))];
+        const datasA = [...new Set(adts.map((a) => a.data))];
+        const { data: existA } = await supabase.from("adiantamentos")
+          .select("imovel_id, data, valor").in("imovel_id", imIds).in("data", datasA);
+        const exSet = new Set((existA ?? []).map((a: any) => `${a.imovel_id}|${a.data}|${Number(a.valor).toFixed(2)}`));
+        for (const a of adts) {
+          const k = `${a.imovel_id}|${a.data}|${a.valor.toFixed(2)}`;
+          if (exSet.has(k)) r.adtDuplicados++;
+          else { exSet.add(k); r.adtNovos++; }
+        }
+      }
+
+      setReport(r);
+    } catch (e: any) {
+      toast.error(`Falha na validação: ${e?.message ?? e}`);
+    } finally {
+      setValidating(false);
+    }
+  }
+
+  async function importar() {
+    setImporting(true);
 
     let inseridos = 0, duplicados = 0, erros = 0;
     const errosDetalhe: string[] = [];

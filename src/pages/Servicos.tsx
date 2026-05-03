@@ -99,7 +99,7 @@ export default function Servicos() {
       .select("id, codigo, valor_faxina, custo_faxina, valor_lavanderia, custo_lavanderia")
       .eq("status", "ativo").order("codigo")
       .then(({ data }) => setImoveis(data ?? []));
-    supabase.from("parametros_servico").select("*").eq("ativo", true).order("nome")
+    supabase.from("parametros_servico").select("*, imoveis(codigo)").eq("ativo", true).order("nome")
       .then(({ data }) => setParams(data ?? []));
   }, []);
 
@@ -134,9 +134,13 @@ export default function Servicos() {
       parametro_id: id,
       custo_real: p.custo,
       valor_cobrado: p.valor_cobrado,
+      ...(p.imovel_id ? { imovel_id: p.imovel_id } : {}),
       ...(tipoMapped ? { tipo: tipoMapped } : {}),
     }));
   }
+
+  const paramsForImovel = (imovelId?: string) =>
+    params.filter((p) => !p.imovel_id || (imovelId && p.imovel_id === imovelId));
 
   // ── Serviços ──
   function onTipoOrImovel(tipo: string, imovel_id: string) {
@@ -182,6 +186,7 @@ export default function Servicos() {
     setFormMan((f: any) => ({
       ...f, parametro_id: id, descricao: f.descricao || p.nome,
       categoria: p.categoria, custo: p.custo, valor_cobrado: p.valor_cobrado,
+      ...(p.imovel_id ? { imovel_id: p.imovel_id } : {}),
     }));
   }
 
@@ -263,10 +268,10 @@ export default function Servicos() {
                         <Select value={formServ.parametro_id ?? ""} onValueChange={selectParamServ}>
                           <SelectTrigger><SelectValue placeholder="Opcional — preenche custo, valor e tipo" /></SelectTrigger>
                           <SelectContent>
-                            {params.map((p) => (
+                            {paramsForImovel(formServ.imovel_id).map((p) => (
                               <SelectItem key={p.id} value={p.id}>
                                 {p.nome}
-                                {p.categoria ? ` · ${p.categoria}` : ""}
+                                {p.imoveis?.codigo ? ` · ${p.imoveis.codigo}` : p.categoria ? ` · ${p.categoria}` : ""}
                                 {` — ${brl(p.custo)} / ${brl(p.valor_cobrado)}`}
                               </SelectItem>
                             ))}
@@ -382,10 +387,10 @@ export default function Servicos() {
                       <Select value={formMan.parametro_id ?? ""} onValueChange={selectParam}>
                         <SelectTrigger><SelectValue placeholder="Opcional — preenche descrição, custo e valor" /></SelectTrigger>
                         <SelectContent>
-                          {params.map((p) => (
+                          {paramsForImovel(formMan.imovel_id).map((p) => (
                             <SelectItem key={p.id} value={p.id}>
                               {p.nome}
-                              {p.categoria ? ` · ${p.categoria}` : ""}
+                              {p.imoveis?.codigo ? ` · ${p.imoveis.codigo}` : p.categoria ? ` · ${p.categoria}` : ""}
                               {` — ${brl(p.custo)} / ${brl(p.valor_cobrado)}`}
                             </SelectItem>
                           ))}

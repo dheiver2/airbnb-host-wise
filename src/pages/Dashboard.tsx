@@ -113,12 +113,13 @@ export default function Dashboard() {
     const baseStart = toIso(new Date(ini.getFullYear(), ini.getMonth(), 2));
     const baseEnd = toIso(new Date(fim.getFullYear(), fim.getMonth() + 1, 1));
 
-    const [r, s, m, c, ad] = await Promise.all([
+    const [r, s, m, c, ad, py] = await Promise.all([
       supabase.from("reservas").select("valor_bruto, check_in, check_out, imovel_id").gte("check_in", baseStart).lte("check_in", baseEnd),
       supabase.from("servicos_operacionais").select("custo_real, valor_cobrado, tipo").gte("mes_competencia", start).lte("mes_competencia", end),
       supabase.from("manutencoes").select("custo, valor_cobrado, rateio").gte("mes_competencia", start).lte("mes_competencia", end),
       supabase.from("custos_fixos").select("valor").gte("mes_competencia", start).lte("mes_competencia", end),
-      supabase.from("adiantamentos").select("valor").gte("data", baseStart).lte("data", baseEnd),
+      supabase.from("adiantamentos").select("valor").gte("data", baseStart).lte("data", baseEnd).eq("is_sa7d", false),
+      supabase.from("payouts").select("valor_pago").gte("data", baseStart).lte("data", baseEnd),
     ]);
 
     const reservas = r.data ?? [];
@@ -126,7 +127,10 @@ export default function Dashboard() {
     const manuts = m.data ?? [];
     const custos = c.data ?? [];
 
-    const faturamento = reservas.reduce((acc, x: any) => acc + Number(x.valor_bruto || 0), 0);
+    // Faturamento bruto = soma dos payouts no período (todos, incluindo SA7D)
+    const faturamento = (py.data ?? []).reduce((acc, x: any) => acc + Number(x.valor_pago || 0), 0);
+    // Mantém soma de reservas para cálculo de ADR/RevPAR (base por noite)
+    const reservasValorBruto = reservas.reduce((acc, x: any) => acc + Number(x.valor_bruto || 0), 0);
 
     const comissao = reservas.reduce((acc, x: any) => {
       const im = imoveisMap[x.imovel_id];
@@ -149,8 +153,8 @@ export default function Dashboard() {
     });
     const cap = imoveis.length * dias;
     const ocupacao = cap > 0 ? (noites / cap) * 100 : 0;
-    const adr = noites > 0 ? faturamento / noites : 0;
-    const revpar = cap > 0 ? faturamento / cap : 0;
+    const adr = noites > 0 ? reservasValorBruto / noites : 0;
+    const revpar = cap > 0 ? reservasValorBruto / cap : 0;
 
     const adiantamentos = (ad.data ?? []).reduce((a, x: any) => a + Number(x.valor || 0), 0);
 
@@ -213,12 +217,12 @@ export default function Dashboard() {
       const s = toIsoDate(new Date(d.getFullYear(), d.getMonth(), 2));
       const e = toIsoDate(new Date(d.getFullYear(), d.getMonth() + 1, 1));
       labels.push(d.toLocaleDateString("pt-BR", { month: "short" }));
-      promises.push(supabase.from("reservas").select("valor_bruto").gte("check_in", s).lte("check_in", e) as unknown as Promise<any>);
+      promises.push(supabase.from("payouts").select("valor_pago").gte("data", s).lte("data", e) as unknown as Promise<any>);
     }
     const results = await Promise.all(promises);
     setEvolucao(results.map((res, idx) => ({
       mes: labels[idx],
-      valor: (res.data ?? []).reduce((sum: number, r: any) => sum + Number(r.valor_bruto || 0), 0),
+      valor: (res.data ?? []).reduce((sum: number, r: any) => sum + Number(r.valor_pago || 0), 0),
     })));
   }
 

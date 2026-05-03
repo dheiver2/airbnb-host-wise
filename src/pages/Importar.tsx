@@ -15,9 +15,21 @@ import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle } from "lucide-react
 import { toast } from "sonner";
 import { brl, dateBR } from "@/lib/format";
 
-type Tipo = "faturamento" | "adiantamentos";
+type Tipo = "extrato_completo" | "faturamento" | "adiantamentos";
 
 const FIELD_OPTIONS: Record<Tipo, { key: string; label: string; required?: boolean }[]> = {
+  extrato_completo: [
+    { key: "tipo_linha", label: "Tipo (Payout/Reserva)", required: true },
+    { key: "data", label: "Data", required: true },
+    { key: "informacoes", label: "Informações (recebedor)", required: true },
+    { key: "anuncio", label: "Anúncio (extrai código)", required: true },
+    { key: "check_in", label: "Data de início (check-in)", required: true },
+    { key: "check_out", label: "Data de término (check-out)", required: true },
+    { key: "valor", label: "Valor (reserva)", required: true },
+    { key: "pago", label: "Pago (payout)", required: true },
+    { key: "taxa", label: "Taxa de serviço do anfitrião" },
+    { key: "codigo_ref", label: "Código de referência" },
+  ],
   faturamento: [
     { key: "anuncio", label: "Anúncio (extrai código)", required: true },
     { key: "check_in", label: "Data de início (check-in)", required: true },
@@ -34,6 +46,10 @@ const FIELD_OPTIONS: Record<Tipo, { key: string; label: string; required?: boole
     { key: "valor", label: "Valor", required: true },
   ],
 };
+
+function isSA7D(info: string): boolean {
+  return /SA7D/i.test(info ?? "");
+}
 
 // Extrai o código do imóvel de strings tipo "ANA104 - 2/4 Beira Mar..." ou "Atauá | Pé na Areia..."
 function extractCodigo(anuncio: string): string | null {
@@ -72,7 +88,7 @@ function parseNum(v: any): number {
 }
 
 export default function Importar() {
-  const [tipo, setTipo] = useState<Tipo>("faturamento");
+  const [tipo, setTipo] = useState<Tipo>("extrato_completo");
   const [rows, setRows] = useState<any[]>([]);
   const [headers, setHeaders] = useState<string[]>([]);
   const [mapping, setMapping] = useState<Record<string, string>>({});
@@ -97,15 +113,19 @@ export default function Importar() {
   function applyAutoMapping(hs: string[], t: Tipo) {
     const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
     const matchers: Record<string, string[]> = {
+      tipo_linha: ["tipo"],
+      informacoes: ["informacoes", "informacao"],
       anuncio: ["anuncio", "rotulosdelinha", "imovel"],
       check_in: ["datadeinicio", "checkin", "inicio"],
       check_out: ["datadetermino", "checkout", "termino", "fim"],
       hospedes: ["hospede", "hospedes"],
       noites: ["noites", "diarias"],
       valor: ["ganhosbrutos", "valorbruto", "somadevalor", "total", "valor"],
+      pago: ["pago"],
       taxa: ["taxadeservico", "taxadoanfitriao", "taxa", "servicefee", "hostfee"],
       valor_liq: ["valorliquido", "liquido", "netliquido", "payout"],
       data: ["data", "datapagamento"],
+      codigo_ref: ["codigodereferencia", "referencia"],
     };
     const auto: Record<string, string> = {};
     FIELD_OPTIONS[t].forEach((f) => {
@@ -191,7 +211,164 @@ export default function Importar() {
 
     try {
 
-    if (tipo === "faturamento") {
+    if (tipo === "extrato_completo") {
+      // Formato Airbnb com Payouts + Reservas. Para cada Payout: cria registro em payouts.
+      // Para cada Reserva: cria reserva (faturamento) E adiantamento (marcando is_sa7d se o último Payout foi para SA7D LTDA).
+      type PendingReserva = {
+        imovel_id: string; check_in: string; check_out: string;
+        valor_bruto: number; taxas_airbnb: number; valor_liquido: number;
+        mes_competencia: string; codigo_airbnb: string | null;
+      };
+      type PendingPayout = {
+        data: string; valor_pago: number; recebedor: string;
+        is_sa7d: boolean; codigo_referencia: string | null;
+      };
+      type PendingAdt = {
+        investidor_id: string; imovel_id: string; data: string;
+        valor: number; mes_competencia: string; recebedor: string; is_sa7d: boolean;
+      };
+
+      const aggReservas = new Map<string, PendingReserva>();
+      const pendingPayouts: PendingPayout[] = [];
+      const pendingAdt: PendingAdt[] = [];
+      let currentRecebedor = "";
+      let currentSA7D = false;
+
+      for (const row of rows) {
+        const tipoLinha = String(row[mapping.tipo_linha] ?? "").trim();
+        if (tipoLinha === "Payout") {
+          const data = parseDate(row[mapping.data]);
+          const pago = parseNum(row[mapping.pago]);
+          const info = String(row[mapping.informacoes] ?? "").trim();
+          const codRef = mapping.codigo_ref ? String(row[mapping.codigo_ref] ?? "").trim() || null : null;
+          currentRecebedor = info;
+          currentSA7D = isSA7D(info);
+          if (data && pago > 0) {
+            pendingPayouts.push({ data, valor_pago: pago, recebedor: info, is_sa7d: currentSA7D, codigo_referencia: codRef });
+          }
+        } else if (tipoLinha === "Reserva") {
+          const anuncio = row[mapping.anuncio];
+          const codigo = extractCodigo(String(anuncio ?? ""));
+          if (!codigo) { erros++; continue; }
+          const im = codigoIndex.get(codigo.toLowerCase());
+          if (!im) { erros++; if (errosDetalhe.length < 5) errosDetalhe.push(`Imóvel não encontrado: ${codigo}`); continue; }
+          const checkIn = parseDate(row[mapping.check_in]);
+          const checkOut = parseDate(row[mapping.check_out]);
+          const dataPay = parseDate(row[mapping.data]); // data do payout associado
+          const valor = parseNum(row[mapping.valor]);
+          if (!checkIn || !checkOut || valor <= 0) { erros++; continue; }
+          const taxa = mapping.taxa ? Math.abs(parseNum(row[mapping.taxa])) : 0;
+          const valorLiquido = valor - taxa;
+
+          // 1) Reserva (agrega múltiplas linhas da mesma reserva)
+          const key = `${im.id}|${checkIn}|${checkOut}`;
+          const ex = aggReservas.get(key);
+          if (ex) {
+            ex.valor_bruto += valor; ex.taxas_airbnb += taxa; ex.valor_liquido += valorLiquido;
+          } else {
+            aggReservas.set(key, {
+              imovel_id: im.id, check_in: checkIn, check_out: checkOut,
+              valor_bruto: valor, taxas_airbnb: taxa, valor_liquido: valorLiquido,
+              mes_competencia: `${checkOut.slice(0, 7)}-01`, codigo_airbnb: null,
+            });
+          }
+
+          // 2) Adiantamento (1 por linha de reserva, ligada ao payout corrente)
+          if (im.investidor_id && dataPay) {
+            pendingAdt.push({
+              investidor_id: im.investidor_id, imovel_id: im.id, data: dataPay,
+              valor, mes_competencia: `${dataPay.slice(0, 7)}-01`,
+              recebedor: currentRecebedor, is_sa7d: currentSA7D,
+            });
+          }
+        }
+      }
+
+      // ── PAYOUTS: insert com upsert manual via dedup
+      if (pendingPayouts.length > 0) {
+        const datas = [...new Set(pendingPayouts.map((p) => p.data))];
+        const { data: existingP } = await supabase.from("payouts")
+          .select("data, valor_pago, recebedor, codigo_referencia")
+          .in("data", datas);
+        const existSet = new Set((existingP ?? []).map((p: any) =>
+          `${p.data}|${Number(p.valor_pago).toFixed(2)}|${p.recebedor}|${p.codigo_referencia ?? ""}`));
+        const toInsP = pendingPayouts.filter((p) => {
+          const k = `${p.data}|${p.valor_pago.toFixed(2)}|${p.recebedor}|${p.codigo_referencia ?? ""}`;
+          if (existSet.has(k)) { duplicados++; return false; }
+          existSet.add(k); return true;
+        });
+        const CHUNK = 500;
+        for (let i = 0; i < toInsP.length; i += CHUNK) {
+          const chunk = toInsP.slice(i, i + CHUNK);
+          const { error } = await supabase.from("payouts").insert(chunk);
+          if (error) { erros += chunk.length; if (errosDetalhe.length < 5) errosDetalhe.push(error.message); }
+          else inseridos += chunk.length;
+        }
+      }
+
+      // ── RESERVAS
+      const pending: PendingReserva[] = Array.from(aggReservas.values());
+      if (pending.length > 0) {
+        const imovelIds = [...new Set(pending.map((r) => r.imovel_id))];
+        const checkIns = [...new Set(pending.map((r) => r.check_in))];
+        const { data: existing } = await supabase.from("reservas")
+          .select("id, imovel_id, check_in, check_out, valor_bruto")
+          .in("imovel_id", imovelIds).in("check_in", checkIns);
+        const existingMap = new Map(
+          (existing ?? []).map((r) => [`${r.imovel_id}|${r.check_in}|${r.check_out}`, r])
+        );
+        const toInsert: PendingReserva[] = [];
+        const toUpdate: { id: string; r: PendingReserva }[] = [];
+        for (const r of pending) {
+          const ex = existingMap.get(`${r.imovel_id}|${r.check_in}|${r.check_out}`);
+          if (!ex) toInsert.push(r);
+          else if (Math.abs(Number(ex.valor_bruto) - r.valor_bruto) < 0.01) duplicados++;
+          else toUpdate.push({ id: ex.id, r });
+        }
+        const CHUNK = 500;
+        for (let i = 0; i < toInsert.length; i += CHUNK) {
+          const chunk = toInsert.slice(i, i + CHUNK);
+          const { error } = await supabase.from("reservas").insert(chunk.map((r) => ({ ...r, hospedes: 1 })));
+          if (error) { erros += chunk.length; if (errosDetalhe.length < 5) errosDetalhe.push(error.message); }
+          else inseridos += chunk.length;
+        }
+        for (const u of toUpdate) {
+          const { error } = await supabase.from("reservas")
+            .update({ valor_bruto: u.r.valor_bruto, taxas_airbnb: u.r.taxas_airbnb, valor_liquido: u.r.valor_liquido })
+            .eq("id", u.id);
+          if (error) { erros++; if (errosDetalhe.length < 5) errosDetalhe.push(error.message); }
+          else inseridos++;
+        }
+      }
+
+      // ── ADIANTAMENTOS (com is_sa7d)
+      if (pendingAdt.length > 0) {
+        const imovelIds = [...new Set(pendingAdt.map((r) => r.imovel_id))];
+        const datas = [...new Set(pendingAdt.map((r) => r.data))];
+        const { data: existingAdt } = await supabase.from("adiantamentos")
+          .select("imovel_id, data, valor")
+          .in("imovel_id", imovelIds).in("data", datas);
+        const existingAdtSet = new Set(
+          (existingAdt ?? []).map((r: any) => `${r.imovel_id}|${r.data}|${Number(r.valor).toFixed(2)}`)
+        );
+        const toInsertAdt: PendingAdt[] = [];
+        for (const r of pendingAdt) {
+          const k = `${r.imovel_id}|${r.data}|${r.valor.toFixed(2)}`;
+          if (existingAdtSet.has(k)) { duplicados++; continue; }
+          existingAdtSet.add(k);
+          toInsertAdt.push(r);
+        }
+        const CHUNK = 500;
+        for (let i = 0; i < toInsertAdt.length; i += CHUNK) {
+          const chunk = toInsertAdt.slice(i, i + CHUNK);
+          const { error } = await supabase.from("adiantamentos").insert(
+            chunk.map((r) => ({ ...r, origem: "airbnb_direto" as const }))
+          );
+          if (error) { erros += chunk.length; if (errosDetalhe.length < 5) errosDetalhe.push(error.message); }
+          else inseridos += chunk.length;
+        }
+      }
+    } else if (tipo === "faturamento") {
       type PendingReserva = {
         imovel_id: string; check_in: string; check_out: string;
         valor_bruto: number; taxas_airbnb: number; valor_liquido: number;
@@ -357,11 +534,12 @@ export default function Importar() {
       <div className="space-y-4 p-6">
         <Tabs value={tipo} onValueChange={(v) => { setTipo(v as Tipo); setRows([]); setHeaders([]); setMapping({}); setWorkbook(null); setSheetNames([]); }}>
           <TabsList>
-            <TabsTrigger value="faturamento">Faturamento (Base Total)</TabsTrigger>
-            <TabsTrigger value="adiantamentos">Adiantamentos pagos</TabsTrigger>
+            <TabsTrigger value="extrato_completo">Extrato Airbnb (CSV completo)</TabsTrigger>
+            <TabsTrigger value="faturamento">Faturamento (legado)</TabsTrigger>
+            <TabsTrigger value="adiantamentos">Adiantamentos (legado)</TabsTrigger>
           </TabsList>
 
-          {(["faturamento", "adiantamentos"] as Tipo[]).map((t) => (
+          {(["extrato_completo", "faturamento", "adiantamentos"] as Tipo[]).map((t) => (
             <TabsContent key={t} value={t} className="space-y-4">
               <Card className="shadow-card">
                 <CardHeader><CardTitle className="text-base">1. Selecione o arquivo (.csv ou .xlsx)</CardTitle></CardHeader>

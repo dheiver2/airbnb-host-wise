@@ -21,9 +21,11 @@ export type Database = {
           id: string
           imovel_id: string | null
           investidor_id: string
+          is_sa7d: boolean
           mes_competencia: string
           observacoes: string | null
           origem: Database["public"]["Enums"]["origem_adiantamento"]
+          recebedor: string | null
           valor: number
         }
         Insert: {
@@ -32,9 +34,11 @@ export type Database = {
           id?: string
           imovel_id?: string | null
           investidor_id: string
+          is_sa7d?: boolean
           mes_competencia: string
           observacoes?: string | null
           origem?: Database["public"]["Enums"]["origem_adiantamento"]
+          recebedor?: string | null
           valor: number
         }
         Update: {
@@ -43,9 +47,11 @@ export type Database = {
           id?: string
           imovel_id?: string | null
           investidor_id?: string
+          is_sa7d?: boolean
           mes_competencia?: string
           observacoes?: string | null
           origem?: Database["public"]["Enums"]["origem_adiantamento"]
+          recebedor?: string | null
           valor?: number
         }
         Relationships: [
@@ -335,6 +341,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      payouts: {
+        Row: {
+          codigo_referencia: string | null
+          created_at: string
+          data: string
+          id: string
+          importacao_id: string | null
+          is_sa7d: boolean
+          recebedor: string
+          valor_pago: number
+        }
+        Insert: {
+          codigo_referencia?: string | null
+          created_at?: string
+          data: string
+          id?: string
+          importacao_id?: string | null
+          is_sa7d?: boolean
+          recebedor: string
+          valor_pago?: number
+        }
+        Update: {
+          codigo_referencia?: string | null
+          created_at?: string
+          data?: string
+          id?: string
+          importacao_id?: string | null
+          is_sa7d?: boolean
+          recebedor?: string
+          valor_pago?: number
+        }
+        Relationships: []
       }
       profiles: {
         Row: {

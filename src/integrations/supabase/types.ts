@@ -295,6 +295,7 @@ export type Database = {
           categoria: string | null
           created_at: string
           custo: number
+          faixas_hospedes: Json | null
           id: string
           imovel_id: string | null
           nome: string
@@ -306,6 +307,7 @@ export type Database = {
           categoria?: string | null
           created_at?: string
           custo?: number
+          faixas_hospedes?: Json | null
           id?: string
           imovel_id?: string | null
           nome: string
@@ -317,6 +319,7 @@ export type Database = {
           categoria?: string | null
           created_at?: string
           custo?: number
+          faixas_hospedes?: Json | null
           id?: string
           imovel_id?: string | null
           nome?: string

@@ -240,6 +240,7 @@ export default function Dashboard() {
   const performance = [
     { label: "ADR · diária média", value: brl(stats.adr), icon: BedDouble, delta: <Delta v={stats.momAdr} />, hint: `${stats.noites} noites no período` },
     { label: "RevPAR · receita / unidade", value: brl(stats.revpar), icon: Gauge, delta: null, hint: "Faturamento ÷ (imóveis × dias)" },
+    { label: "Adiantamentos", value: brl(stats.adiantamentos), icon: Wallet, delta: <Delta v={stats.momAdiantamentos} />, hint: "Repasses no período" },
   ];
 
   return (

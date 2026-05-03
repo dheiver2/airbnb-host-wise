@@ -113,13 +113,12 @@ export default function Dashboard() {
     const baseStart = toIso(new Date(ini.getFullYear(), ini.getMonth(), 2));
     const baseEnd = toIso(new Date(fim.getFullYear(), fim.getMonth() + 1, 1));
 
-    const [r, s, m, c, ad, py] = await Promise.all([
+    const [r, s, m, c, py] = await Promise.all([
       supabase.from("reservas").select("valor_bruto, check_in, check_out, imovel_id").gte("check_in", baseStart).lte("check_in", baseEnd),
       supabase.from("servicos_operacionais").select("custo_real, valor_cobrado, tipo").gte("mes_competencia", start).lte("mes_competencia", end),
       supabase.from("manutencoes").select("custo, valor_cobrado, rateio").gte("mes_competencia", start).lte("mes_competencia", end),
       supabase.from("custos_fixos").select("valor").gte("mes_competencia", start).lte("mes_competencia", end),
-      supabase.from("adiantamentos").select("valor").gte("data", baseStart).lte("data", baseEnd).eq("is_sa7d", false),
-      supabase.from("payouts").select("valor_pago").gte("data", baseStart).lte("data", baseEnd),
+      supabase.from("payouts").select("valor_pago, is_sa7d").gte("data", baseStart).lte("data", baseEnd),
     ]);
 
     const reservas = r.data ?? [];
@@ -127,8 +126,9 @@ export default function Dashboard() {
     const manuts = m.data ?? [];
     const custos = c.data ?? [];
 
+    const payouts = py.data ?? [];
     // Faturamento bruto = soma dos payouts no período (todos, incluindo SA7D)
-    const faturamento = (py.data ?? []).reduce((acc, x: any) => acc + Number(x.valor_pago || 0), 0);
+    const faturamento = payouts.reduce((acc, x: any) => acc + Number(x.valor_pago || 0), 0);
     // Mantém soma de reservas para cálculo de ADR/RevPAR (base por noite)
     const reservasValorBruto = reservas.reduce((acc, x: any) => acc + Number(x.valor_bruto || 0), 0);
 
@@ -156,7 +156,9 @@ export default function Dashboard() {
     const adr = noites > 0 ? reservasValorBruto / noites : 0;
     const revpar = cap > 0 ? reservasValorBruto / cap : 0;
 
-    const adiantamentos = (ad.data ?? []).reduce((a, x: any) => a + Number(x.valor || 0), 0);
+    const adiantamentos = payouts
+      .filter((x: any) => x.is_sa7d === false)
+      .reduce((a: number, x: any) => a + Number(x.valor_pago || 0), 0);
 
     return { faturamento, lucro, ocupacao, adr, revpar, noites, adiantamentos };
   }

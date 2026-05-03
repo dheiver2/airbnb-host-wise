@@ -1,0 +1,2 @@
+ALTER TABLE public.parametros_servico ADD COLUMN imovel_id uuid REFERENCES public.imoveis(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_parametros_servico_imovel ON public.parametros_servico(imovel_id);

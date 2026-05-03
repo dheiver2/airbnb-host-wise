@@ -15,9 +15,21 @@ import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle } from "lucide-react
 import { toast } from "sonner";
 import { brl, dateBR } from "@/lib/format";
 
-type Tipo = "faturamento" | "adiantamentos";
+type Tipo = "extrato_completo" | "faturamento" | "adiantamentos";
 
 const FIELD_OPTIONS: Record<Tipo, { key: string; label: string; required?: boolean }[]> = {
+  extrato_completo: [
+    { key: "tipo_linha", label: "Tipo (Payout/Reserva)", required: true },
+    { key: "data", label: "Data", required: true },
+    { key: "informacoes", label: "Informações (recebedor)", required: true },
+    { key: "anuncio", label: "Anúncio (extrai código)", required: true },
+    { key: "check_in", label: "Data de início (check-in)", required: true },
+    { key: "check_out", label: "Data de término (check-out)", required: true },
+    { key: "valor", label: "Valor (reserva)", required: true },
+    { key: "pago", label: "Pago (payout)", required: true },
+    { key: "taxa", label: "Taxa de serviço do anfitrião" },
+    { key: "codigo_ref", label: "Código de referência" },
+  ],
   faturamento: [
     { key: "anuncio", label: "Anúncio (extrai código)", required: true },
     { key: "check_in", label: "Data de início (check-in)", required: true },
@@ -34,6 +46,10 @@ const FIELD_OPTIONS: Record<Tipo, { key: string; label: string; required?: boole
     { key: "valor", label: "Valor", required: true },
   ],
 };
+
+function isSA7D(info: string): boolean {
+  return /SA7D/i.test(info ?? "");
+}
 
 // Extrai o código do imóvel de strings tipo "ANA104 - 2/4 Beira Mar..." ou "Atauá | Pé na Areia..."
 function extractCodigo(anuncio: string): string | null {

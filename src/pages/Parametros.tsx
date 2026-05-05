@@ -12,6 +12,13 @@ import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { brl } from "@/lib/format";
 import { Combobox } from "@/components/Combobox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+const AREAS = ["faxina", "lavanderia", "logistica", "casa", "manutencao", "escritorio"] as const;
+const AREA_LABELS: Record<string, string> = {
+  faxina: "Faxina", lavanderia: "Lavanderia", logistica: "Logística",
+  casa: "Casa", manutencao: "Manutenção", escritorio: "Escritório",
+};
 
 export default function Parametros() {
   const [list, setList] = useState<any[]>([]);

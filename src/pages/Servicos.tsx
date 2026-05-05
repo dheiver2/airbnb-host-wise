@@ -17,6 +17,11 @@ import { brl, dateBR, monthRange } from "@/lib/format";
 import { useCompetenciaState } from "@/hooks/useLatestCompetencia";
 
 const TIPOS_SERVICO = ["faxina", "lavanderia", "material", "manutencao"] as const;
+const AREAS = ["faxina", "lavanderia", "logistica", "casa", "manutencao", "escritorio"] as const;
+const AREA_LABELS: Record<string, string> = {
+  faxina: "Faxina", lavanderia: "Lavanderia", logistica: "Logística",
+  casa: "Casa", manutencao: "Manutenção", escritorio: "Escritório",
+};
 const BUCKET = "anexos";
 
 type Anexo = { nome: string; url: string; path: string };
@@ -162,7 +167,7 @@ export default function Servicos() {
       imovel_id: formServ.imovel_id, data: formServ.data, tipo: formServ.tipo,
       custo_real: Number(formServ.custo_real ?? 0), valor_cobrado: Number(formServ.valor_cobrado ?? 0),
       prestador: formServ.prestador || null, mes_competencia: competencia, anexos: [],
-      parametro_id: formServ.parametro_id || null,
+      parametro_id: formServ.parametro_id || null, area: formServ.area || null,
     }).select("id").single();
     if (error) return toast.error(error.message);
     if (filesServ.length > 0) {
@@ -194,11 +199,12 @@ export default function Servicos() {
     if (!formMan.imovel_id || !formMan.data || !formMan.descricao)
       return toast.error("Preencha imóvel, data e descrição");
     const competencia = `${String(formMan.data).slice(0, 7)}-01`;
-    const { data: inserted, error } = await supabase.from("manutencoes").insert({
+    const { data: inserted, error } = await (supabase.from("manutencoes") as any).insert({
       imovel_id: formMan.imovel_id, parametro_id: formMan.parametro_id || null,
       data: formMan.data, descricao: formMan.descricao, categoria: formMan.categoria || null,
       custo: Number(formMan.custo ?? 0), valor_cobrado: Number(formMan.valor_cobrado ?? 0),
       rateio: formMan.rateio, mes_competencia: competencia, anexos: [],
+      area: formMan.area || null,
     }).select("id").single();
     if (error) return toast.error(error.message);
     if (filesMan.length > 0) {
@@ -305,6 +311,13 @@ export default function Servicos() {
                       <Label>Valor cobrado</Label>
                       <Input type="number" step="0.01" value={formServ.valor_cobrado ?? ""} onChange={(e) => setFormServ({ ...formServ, valor_cobrado: e.target.value })} />
                     </div>
+                    <div className="space-y-1.5">
+                      <Label>Área</Label>
+                      <Select value={formServ.area ?? ""} onValueChange={(v) => setFormServ({ ...formServ, area: v })}>
+                        <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectContent>{AREAS.map((a) => <SelectItem key={a} value={a}>{AREA_LABELS[a]}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
                     <div className="space-y-1.5 sm:col-span-2">
                       <Label>Prestador</Label>
                       <Input value={formServ.prestador ?? ""} onChange={(e) => setFormServ({ ...formServ, prestador: e.target.value })} />
@@ -323,12 +336,13 @@ export default function Servicos() {
               <Table className="min-w-[820px]">
                 <TableHeader><TableRow>
                   <TableHead>Data</TableHead><TableHead>Imóvel</TableHead><TableHead>Tipo</TableHead>
+                  <TableHead>Área</TableHead>
                   <TableHead>Prestador</TableHead><TableHead>Custo</TableHead><TableHead>Cobrado</TableHead>
                   <TableHead>Margem</TableHead><TableHead>Anexos</TableHead><TableHead></TableHead>
                 </TableRow></TableHeader>
                 <TableBody>
                   {listServ.length === 0 && (
-                    <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">Sem lançamentos.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-8">Sem lançamentos.</TableCell></TableRow>
                   )}
                   {listServ.map((s) => {
                     const anexos = getAnexos(s);
@@ -337,6 +351,7 @@ export default function Servicos() {
                         <TableCell>{dateBR(s.data)}</TableCell>
                         <TableCell className="font-medium">{s.imoveis?.codigo}</TableCell>
                         <TableCell className="capitalize">{s.tipo}</TableCell>
+                        <TableCell>{s.area ? AREA_LABELS[s.area] ?? s.area : "—"}</TableCell>
                         <TableCell className="text-muted-foreground">{s.prestador ?? "—"}</TableCell>
                         <TableCell className="num">{brl(s.custo_real)}</TableCell>
                         <TableCell className="num">{brl(s.valor_cobrado)}</TableCell>
@@ -409,7 +424,14 @@ export default function Servicos() {
                       <Label>Valor cobrado</Label>
                       <Input type="number" step="0.01" value={formMan.valor_cobrado ?? ""} onChange={(e) => setFormMan({ ...formMan, valor_cobrado: e.target.value })} />
                     </div>
-                    <div className="space-y-1.5 sm:col-span-2">
+                    <div className="space-y-1.5">
+                      <Label>Área</Label>
+                      <Select value={formMan.area ?? ""} onValueChange={(v) => setFormMan({ ...formMan, area: v })}>
+                        <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectContent>{AREAS.map((a) => <SelectItem key={a} value={a}>{AREA_LABELS[a]}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
                       <Label>Rateio *</Label>
                       <Select value={formMan.rateio ?? "investidor"} onValueChange={(v) => setFormMan({ ...formMan, rateio: v })}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
@@ -433,12 +455,13 @@ export default function Servicos() {
               <Table className="min-w-[820px]">
                 <TableHeader><TableRow>
                   <TableHead>Data</TableHead><TableHead>Imóvel</TableHead><TableHead>Descrição</TableHead>
+                  <TableHead>Área</TableHead>
                   <TableHead>Custo</TableHead><TableHead>Cobrado</TableHead><TableHead>Rateio</TableHead>
                   <TableHead>Anexos</TableHead><TableHead></TableHead>
                 </TableRow></TableHeader>
                 <TableBody>
                   {listMan.length === 0 && (
-                    <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">Sem manutenções no mês.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">Sem manutenções no mês.</TableCell></TableRow>
                   )}
                   {listMan.map((m) => {
                     const anexos = getAnexos(m);
@@ -447,6 +470,7 @@ export default function Servicos() {
                         <TableCell>{dateBR(m.data)}</TableCell>
                         <TableCell className="font-medium">{m.imoveis?.codigo}</TableCell>
                         <TableCell className="text-muted-foreground max-w-[260px] truncate">{m.descricao}</TableCell>
+                        <TableCell>{m.area ? AREA_LABELS[m.area] ?? m.area : "—"}</TableCell>
                         <TableCell className="num">{brl(m.custo)}</TableCell>
                         <TableCell className="num">{brl(m.valor_cobrado)}</TableCell>
                         <TableCell>

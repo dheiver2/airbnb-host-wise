@@ -235,6 +235,7 @@ export type Database = {
       manutencoes: {
         Row: {
           anexos: Json | null
+          area: string | null
           categoria: string | null
           created_at: string
           custo: number
@@ -250,6 +251,7 @@ export type Database = {
         }
         Insert: {
           anexos?: Json | null
+          area?: string | null
           categoria?: string | null
           created_at?: string
           custo?: number
@@ -265,6 +267,7 @@ export type Database = {
         }
         Update: {
           anexos?: Json | null
+          area?: string | null
           categoria?: string | null
           created_at?: string
           custo?: number
@@ -455,6 +458,7 @@ export type Database = {
       servicos_operacionais: {
         Row: {
           anexos: Json | null
+          area: string | null
           created_at: string
           custo_real: number
           data: string
@@ -470,6 +474,7 @@ export type Database = {
         }
         Insert: {
           anexos?: Json | null
+          area?: string | null
           created_at?: string
           custo_real?: number
           data: string
@@ -485,6 +490,7 @@ export type Database = {
         }
         Update: {
           anexos?: Json | null
+          area?: string | null
           created_at?: string
           custo_real?: number
           data?: string

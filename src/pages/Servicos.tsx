@@ -167,7 +167,7 @@ export default function Servicos() {
       imovel_id: formServ.imovel_id, data: formServ.data, tipo: formServ.tipo,
       custo_real: Number(formServ.custo_real ?? 0), valor_cobrado: Number(formServ.valor_cobrado ?? 0),
       prestador: formServ.prestador || null, mes_competencia: competencia, anexos: [],
-      parametro_id: formServ.parametro_id || null,
+      parametro_id: formServ.parametro_id || null, area: formServ.area || null,
     }).select("id").single();
     if (error) return toast.error(error.message);
     if (filesServ.length > 0) {

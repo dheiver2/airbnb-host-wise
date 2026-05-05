@@ -131,14 +131,15 @@ export default function Parametros() {
           <CardContent className="p-0">
             <Table>
               <TableHeader><TableRow>
-                <TableHead>Nome</TableHead><TableHead>Imóvel</TableHead><TableHead>Categoria</TableHead><TableHead>Custo</TableHead><TableHead>Cobrado</TableHead><TableHead>Margem</TableHead><TableHead>Ativo</TableHead><TableHead className="w-[110px]"></TableHead>
+                <TableHead>Nome</TableHead><TableHead>Imóvel</TableHead><TableHead>Área</TableHead><TableHead>Categoria</TableHead><TableHead>Custo</TableHead><TableHead>Cobrado</TableHead><TableHead>Margem</TableHead><TableHead>Ativo</TableHead><TableHead className="w-[110px]"></TableHead>
               </TableRow></TableHeader>
               <TableBody>
-                {list.length === 0 && <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">Nenhum parâmetro cadastrado.</TableCell></TableRow>}
+                {list.length === 0 && <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">Nenhum parâmetro cadastrado.</TableCell></TableRow>}
                 {list.map((p) => (
                   <TableRow key={p.id}>
                     <TableCell className="font-medium">{p.nome}</TableCell>
                     <TableCell className="text-muted-foreground">{p.imoveis?.codigo ?? "Geral"}</TableCell>
+                    <TableCell>{p.area ? AREA_LABELS[p.area] ?? p.area : "—"}</TableCell>
                     <TableCell className="text-muted-foreground">{p.categoria ?? "—"}</TableCell>
                     <TableCell className="num">{brl(p.custo)}</TableCell>
                     <TableCell className="num">{brl(p.valor_cobrado)}</TableCell>

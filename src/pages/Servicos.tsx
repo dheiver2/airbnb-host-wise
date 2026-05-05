@@ -199,11 +199,12 @@ export default function Servicos() {
     if (!formMan.imovel_id || !formMan.data || !formMan.descricao)
       return toast.error("Preencha imóvel, data e descrição");
     const competencia = `${String(formMan.data).slice(0, 7)}-01`;
-    const { data: inserted, error } = await supabase.from("manutencoes").insert({
+    const { data: inserted, error } = await (supabase.from("manutencoes") as any).insert({
       imovel_id: formMan.imovel_id, parametro_id: formMan.parametro_id || null,
       data: formMan.data, descricao: formMan.descricao, categoria: formMan.categoria || null,
       custo: Number(formMan.custo ?? 0), valor_cobrado: Number(formMan.valor_cobrado ?? 0),
       rateio: formMan.rateio, mes_competencia: competencia, anexos: [],
+      area: formMan.area || null,
     }).select("id").single();
     if (error) return toast.error(error.message);
     if (filesMan.length > 0) {

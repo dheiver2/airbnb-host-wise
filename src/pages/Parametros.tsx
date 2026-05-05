@@ -50,6 +50,7 @@ export default function Parametros() {
       custo: Number(editing.custo ?? 0), valor_cobrado: Number(editing.valor_cobrado ?? 0),
       ativo: editing.ativo ?? true,
       imovel_id: editing.imovel_id || null,
+      area: editing.area || null,
       faixas_hospedes: faixas,
     };
     const res = editing.id ? await supabase.from("parametros_servico").update(payload).eq("id", editing.id) : await supabase.from("parametros_servico").insert(payload);

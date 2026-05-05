@@ -336,12 +336,13 @@ export default function Servicos() {
               <Table className="min-w-[820px]">
                 <TableHeader><TableRow>
                   <TableHead>Data</TableHead><TableHead>Imóvel</TableHead><TableHead>Tipo</TableHead>
+                  <TableHead>Área</TableHead>
                   <TableHead>Prestador</TableHead><TableHead>Custo</TableHead><TableHead>Cobrado</TableHead>
                   <TableHead>Margem</TableHead><TableHead>Anexos</TableHead><TableHead></TableHead>
                 </TableRow></TableHeader>
                 <TableBody>
                   {listServ.length === 0 && (
-                    <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">Sem lançamentos.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-8">Sem lançamentos.</TableCell></TableRow>
                   )}
                   {listServ.map((s) => {
                     const anexos = getAnexos(s);
@@ -350,6 +351,7 @@ export default function Servicos() {
                         <TableCell>{dateBR(s.data)}</TableCell>
                         <TableCell className="font-medium">{s.imoveis?.codigo}</TableCell>
                         <TableCell className="capitalize">{s.tipo}</TableCell>
+                        <TableCell>{s.area ? AREA_LABELS[s.area] ?? s.area : "—"}</TableCell>
                         <TableCell className="text-muted-foreground">{s.prestador ?? "—"}</TableCell>
                         <TableCell className="num">{brl(s.custo_real)}</TableCell>
                         <TableCell className="num">{brl(s.valor_cobrado)}</TableCell>

@@ -140,6 +140,7 @@ export default function Servicos() {
       custo_real: p.custo,
       valor_cobrado: p.valor_cobrado,
       ...(p.imovel_id ? { imovel_id: p.imovel_id } : {}),
+      ...(p.area ? { area: p.area } : {}),
       ...(tipoMapped ? { tipo: tipoMapped } : {}),
     }));
   }

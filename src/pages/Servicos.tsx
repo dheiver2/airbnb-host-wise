@@ -342,6 +342,24 @@ export default function Servicos() {
                       <Label>Prestador</Label>
                       <Input value={formServ.prestador ?? ""} onChange={(e) => setFormServ({ ...formServ, prestador: e.target.value })} />
                     </div>
+                    {(() => {
+                      const p = params.find((x) => x.id === formServ.parametro_id);
+                      if (!p) return null;
+                      const cReal = Number(formServ.custo_real ?? 0);
+                      const vReal = Number(formServ.valor_cobrado ?? 0);
+                      const cParam = Number(p.custo ?? 0);
+                      const vParam = Number(p.valor_cobrado ?? 0);
+                      const dCusto = cParam > 0 ? Math.abs(cReal - cParam) / cParam : 0;
+                      const dValor = vParam > 0 ? Math.abs(vReal - vParam) / vParam : 0;
+                      if (dCusto < 0.1 && dValor < 0.1) return null;
+                      return (
+                        <div className="sm:col-span-2 rounded-md border border-yellow-500/50 bg-yellow-500/10 px-3 py-2 text-xs text-yellow-700 dark:text-yellow-400">
+                          ⚠️ Divergência vs parâmetro <strong>{p.nome}</strong>:
+                          {dCusto >= 0.1 && <> custo {cReal > cParam ? "+" : "−"}{(dCusto * 100).toFixed(0)}% (esperado {brl(cParam)}).</>}
+                          {dValor >= 0.1 && <> Valor {vReal > vParam ? "+" : "−"}{(dValor * 100).toFixed(0)}% (esperado {brl(vParam)}).</>}
+                        </div>
+                      );
+                    })()}
                     <div className="space-y-1.5 sm:col-span-2">
                       <Label>Anexos</Label>
                       <FileSelector files={filesServ} onChange={setFilesServ} inputRef={fileInputServRef} />

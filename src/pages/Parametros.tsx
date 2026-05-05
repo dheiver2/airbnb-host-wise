@@ -90,6 +90,13 @@ export default function Parametros() {
                     onChange={(v) => setEditing({ ...editing, imovel_id: v })}
                   />
                 </div>
+                <div className="space-y-1.5">
+                  <Label>Área</Label>
+                  <Select value={editing?.area ?? ""} onValueChange={(v) => setEditing({ ...editing, area: v })}>
+                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectContent>{AREAS.map((a) => <SelectItem key={a} value={a}>{AREA_LABELS[a]}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5"><Label>Custo {isLavanderia && <span className="text-muted-foreground text-xs">(base)</span>}</Label><Input type="number" step="0.01" value={editing?.custo ?? 0} onChange={(e) => setEditing({ ...editing, custo: e.target.value })} /></div>
                   <div className="space-y-1.5"><Label>Valor cobrado {isLavanderia && <span className="text-muted-foreground text-xs">(base)</span>}</Label><Input type="number" step="0.01" value={editing?.valor_cobrado ?? 0} onChange={(e) => setEditing({ ...editing, valor_cobrado: e.target.value })} /></div>

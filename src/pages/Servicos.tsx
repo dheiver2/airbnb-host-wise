@@ -424,7 +424,14 @@ export default function Servicos() {
                       <Label>Valor cobrado</Label>
                       <Input type="number" step="0.01" value={formMan.valor_cobrado ?? ""} onChange={(e) => setFormMan({ ...formMan, valor_cobrado: e.target.value })} />
                     </div>
-                    <div className="space-y-1.5 sm:col-span-2">
+                    <div className="space-y-1.5">
+                      <Label>Área</Label>
+                      <Select value={formMan.area ?? ""} onValueChange={(v) => setFormMan({ ...formMan, area: v })}>
+                        <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectContent>{AREAS.map((a) => <SelectItem key={a} value={a}>{AREA_LABELS[a]}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
                       <Label>Rateio *</Label>
                       <Select value={formMan.rateio ?? "investidor"} onValueChange={(v) => setFormMan({ ...formMan, rateio: v })}>
                         <SelectTrigger><SelectValue /></SelectTrigger>

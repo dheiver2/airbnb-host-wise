@@ -300,6 +300,7 @@ export type Database = {
       }
       parametros_servico: {
         Row: {
+          area: string | null
           ativo: boolean
           categoria: string | null
           created_at: string
@@ -312,6 +313,7 @@ export type Database = {
           valor_cobrado: number
         }
         Insert: {
+          area?: string | null
           ativo?: boolean
           categoria?: string | null
           created_at?: string
@@ -324,6 +326,7 @@ export type Database = {
           valor_cobrado?: number
         }
         Update: {
+          area?: string | null
           ativo?: boolean
           categoria?: string | null
           created_at?: string

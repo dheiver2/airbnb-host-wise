@@ -17,6 +17,11 @@ import { brl, dateBR, monthRange } from "@/lib/format";
 import { useCompetenciaState } from "@/hooks/useLatestCompetencia";
 
 const TIPOS_SERVICO = ["faxina", "lavanderia", "material", "manutencao"] as const;
+const AREAS = ["faxina", "lavanderia", "logistica", "casa", "manutencao", "escritorio"] as const;
+const AREA_LABELS: Record<string, string> = {
+  faxina: "Faxina", lavanderia: "Lavanderia", logistica: "Logística",
+  casa: "Casa", manutencao: "Manutenção", escritorio: "Escritório",
+};
 const BUCKET = "anexos";
 
 type Anexo = { nome: string; url: string; path: string };

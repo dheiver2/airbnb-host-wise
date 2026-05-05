@@ -311,6 +311,13 @@ export default function Servicos() {
                       <Label>Valor cobrado</Label>
                       <Input type="number" step="0.01" value={formServ.valor_cobrado ?? ""} onChange={(e) => setFormServ({ ...formServ, valor_cobrado: e.target.value })} />
                     </div>
+                    <div className="space-y-1.5">
+                      <Label>Área</Label>
+                      <Select value={formServ.area ?? ""} onValueChange={(v) => setFormServ({ ...formServ, area: v })}>
+                        <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectContent>{AREAS.map((a) => <SelectItem key={a} value={a}>{AREA_LABELS[a]}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
                     <div className="space-y-1.5 sm:col-span-2">
                       <Label>Prestador</Label>
                       <Input value={formServ.prestador ?? ""} onChange={(e) => setFormServ({ ...formServ, prestador: e.target.value })} />

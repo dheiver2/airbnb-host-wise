@@ -164,18 +164,36 @@ export default function Servicos() {
     if (!formServ.imovel_id || !formServ.data || !formServ.tipo)
       return toast.error("Preencha imóvel, data e tipo");
     const competencia = `${String(formServ.data).slice(0, 7)}-01`;
+
+    // Vincula automaticamente à reserva cujo check_out = data (faxina/lavanderia pós-saída)
+    // ou que englobe a data (manutenções durante a estadia).
+    let reservaId: string | null = null;
+    const { data: resMatch } = await supabase.from("reservas")
+      .select("id, check_in, check_out")
+      .eq("imovel_id", formServ.imovel_id)
+      .lte("check_in", formServ.data)
+      .gte("check_out", formServ.data)
+      .order("check_out", { ascending: false }).limit(1);
+    if (resMatch && resMatch.length > 0) reservaId = resMatch[0].id;
+    else {
+      const { data: resOut } = await supabase.from("reservas")
+        .select("id").eq("imovel_id", formServ.imovel_id).eq("check_out", formServ.data).limit(1);
+      if (resOut && resOut.length > 0) reservaId = resOut[0].id;
+    }
+
     const { data: inserted, error } = await (supabase.from("servicos_operacionais") as any).insert({
       imovel_id: formServ.imovel_id, data: formServ.data, tipo: formServ.tipo,
       custo_real: Number(formServ.custo_real ?? 0), valor_cobrado: Number(formServ.valor_cobrado ?? 0),
       prestador: formServ.prestador || null, mes_competencia: competencia, anexos: [],
       parametro_id: formServ.parametro_id || null, area: formServ.area || null,
+      reserva_id: reservaId,
     }).select("id").single();
     if (error) return toast.error(error.message);
     if (filesServ.length > 0) {
       const anexos = await uploadFiles(filesServ, `servicos/${inserted.id}`);
       await supabase.from("servicos_operacionais").update({ anexos }).eq("id", inserted.id);
     }
-    toast.success("Lançado");
+    toast.success(reservaId ? "Lançado e vinculado à reserva" : "Lançado");
     setOpenServ(false); setFormServ({}); setFilesServ([]); loadServ();
   }
 
@@ -324,6 +342,24 @@ export default function Servicos() {
                       <Label>Prestador</Label>
                       <Input value={formServ.prestador ?? ""} onChange={(e) => setFormServ({ ...formServ, prestador: e.target.value })} />
                     </div>
+                    {(() => {
+                      const p = params.find((x) => x.id === formServ.parametro_id);
+                      if (!p) return null;
+                      const cReal = Number(formServ.custo_real ?? 0);
+                      const vReal = Number(formServ.valor_cobrado ?? 0);
+                      const cParam = Number(p.custo ?? 0);
+                      const vParam = Number(p.valor_cobrado ?? 0);
+                      const dCusto = cParam > 0 ? Math.abs(cReal - cParam) / cParam : 0;
+                      const dValor = vParam > 0 ? Math.abs(vReal - vParam) / vParam : 0;
+                      if (dCusto < 0.1 && dValor < 0.1) return null;
+                      return (
+                        <div className="sm:col-span-2 rounded-md border border-yellow-500/50 bg-yellow-500/10 px-3 py-2 text-xs text-yellow-700 dark:text-yellow-400">
+                          ⚠️ Divergência vs parâmetro <strong>{p.nome}</strong>:
+                          {dCusto >= 0.1 && <> custo {cReal > cParam ? "+" : "−"}{(dCusto * 100).toFixed(0)}% (esperado {brl(cParam)}).</>}
+                          {dValor >= 0.1 && <> Valor {vReal > vParam ? "+" : "−"}{(dValor * 100).toFixed(0)}% (esperado {brl(vParam)}).</>}
+                        </div>
+                      );
+                    })()}
                     <div className="space-y-1.5 sm:col-span-2">
                       <Label>Anexos</Label>
                       <FileSelector files={filesServ} onChange={setFilesServ} inputRef={fileInputServRef} />
@@ -433,6 +469,24 @@ export default function Servicos() {
                         <SelectContent>{AREAS.map((a) => <SelectItem key={a} value={a}>{AREA_LABELS[a]}</SelectItem>)}</SelectContent>
                       </Select>
                     </div>
+                    {(() => {
+                      const p = params.find((x) => x.id === formMan.parametro_id);
+                      if (!p) return null;
+                      const cReal = Number(formMan.custo ?? 0);
+                      const vReal = Number(formMan.valor_cobrado ?? 0);
+                      const cParam = Number(p.custo ?? 0);
+                      const vParam = Number(p.valor_cobrado ?? 0);
+                      const dCusto = cParam > 0 ? Math.abs(cReal - cParam) / cParam : 0;
+                      const dValor = vParam > 0 ? Math.abs(vReal - vParam) / vParam : 0;
+                      if (dCusto < 0.1 && dValor < 0.1) return null;
+                      return (
+                        <div className="sm:col-span-2 rounded-md border border-yellow-500/50 bg-yellow-500/10 px-3 py-2 text-xs text-yellow-700 dark:text-yellow-400">
+                          ⚠️ Divergência vs parâmetro <strong>{p.nome}</strong>:
+                          {dCusto >= 0.1 && <> custo {cReal > cParam ? "+" : "−"}{(dCusto * 100).toFixed(0)}% (esperado {brl(cParam)}).</>}
+                          {dValor >= 0.1 && <> Valor {vReal > vParam ? "+" : "−"}{(dValor * 100).toFixed(0)}% (esperado {brl(vParam)}).</>}
+                        </div>
+                      );
+                    })()}
                     <div className="space-y-1.5">
                       <Label>Rateio *</Label>
                       <Select value={formMan.rateio ?? "investidor"} onValueChange={(v) => setFormMan({ ...formMan, rateio: v })}>

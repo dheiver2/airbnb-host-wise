@@ -164,18 +164,36 @@ export default function Servicos() {
     if (!formServ.imovel_id || !formServ.data || !formServ.tipo)
       return toast.error("Preencha imóvel, data e tipo");
     const competencia = `${String(formServ.data).slice(0, 7)}-01`;
+
+    // Vincula automaticamente à reserva cujo check_out = data (faxina/lavanderia pós-saída)
+    // ou que englobe a data (manutenções durante a estadia).
+    let reservaId: string | null = null;
+    const { data: resMatch } = await supabase.from("reservas")
+      .select("id, check_in, check_out")
+      .eq("imovel_id", formServ.imovel_id)
+      .lte("check_in", formServ.data)
+      .gte("check_out", formServ.data)
+      .order("check_out", { ascending: false }).limit(1);
+    if (resMatch && resMatch.length > 0) reservaId = resMatch[0].id;
+    else {
+      const { data: resOut } = await supabase.from("reservas")
+        .select("id").eq("imovel_id", formServ.imovel_id).eq("check_out", formServ.data).limit(1);
+      if (resOut && resOut.length > 0) reservaId = resOut[0].id;
+    }
+
     const { data: inserted, error } = await (supabase.from("servicos_operacionais") as any).insert({
       imovel_id: formServ.imovel_id, data: formServ.data, tipo: formServ.tipo,
       custo_real: Number(formServ.custo_real ?? 0), valor_cobrado: Number(formServ.valor_cobrado ?? 0),
       prestador: formServ.prestador || null, mes_competencia: competencia, anexos: [],
       parametro_id: formServ.parametro_id || null, area: formServ.area || null,
+      reserva_id: reservaId,
     }).select("id").single();
     if (error) return toast.error(error.message);
     if (filesServ.length > 0) {
       const anexos = await uploadFiles(filesServ, `servicos/${inserted.id}`);
       await supabase.from("servicos_operacionais").update({ anexos }).eq("id", inserted.id);
     }
-    toast.success("Lançado");
+    toast.success(reservaId ? "Lançado e vinculado à reserva" : "Lançado");
     setOpenServ(false); setFormServ({}); setFilesServ([]); loadServ();
   }
 

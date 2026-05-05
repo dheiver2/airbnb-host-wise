@@ -193,6 +193,7 @@ export default function Servicos() {
       ...f, parametro_id: id, descricao: f.descricao || p.nome,
       categoria: p.categoria, custo: p.custo, valor_cobrado: p.valor_cobrado,
       ...(p.imovel_id ? { imovel_id: p.imovel_id } : {}),
+      ...(p.area ? { area: p.area } : {}),
     }));
   }
 

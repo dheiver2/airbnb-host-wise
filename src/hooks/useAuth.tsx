@@ -28,15 +28,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
       setSession(s);
       setUser(s?.user ?? null);
-      if (s?.user) {
-        // setTimeout: evita rodar query supabase de dentro do callback (recomendação supabase-js)
-        setTimeout(() => { loadRoles(s.user.id); }, 0);
-      } else {
+      if (!s?.user) {
         setRoles([]);
+        setLoading(false);
+        return;
       }
+      // Em login interativo, segura o loading até roles chegarem para
+      // não mostrar a tela "sem papel" entre setUser e setRoles.
+      // (TOKEN_REFRESHED e USER_UPDATED não mexem nos papéis.)
+      const blockingReload = event === "SIGNED_IN";
+      if (blockingReload) setLoading(true);
+      // setTimeout: evita rodar query supabase de dentro do callback (recomendação supabase-js)
+      setTimeout(async () => {
+        await loadRoles(s.user.id);
+        if (blockingReload) setLoading(false);
+      }, 0);
     });
 
     (async () => {

@@ -11,20 +11,36 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, ShieldAlert, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { brl, dateBR } from "@/lib/format";
 
-type Tipo = "faturamento" | "adiantamentos";
+type Tipo = "extrato_completo" | "faturamento" | "adiantamentos";
 
 const FIELD_OPTIONS: Record<Tipo, { key: string; label: string; required?: boolean }[]> = {
+  extrato_completo: [
+    { key: "tipo_linha", label: "Tipo (Payout/Reserva)", required: true },
+    { key: "data", label: "Data", required: true },
+    { key: "informacoes", label: "Informações (recebedor)", required: true },
+    { key: "anuncio", label: "Anúncio (extrai código)", required: true },
+    { key: "check_in", label: "Data de início (check-in)", required: true },
+    { key: "check_out", label: "Data de término (check-out)", required: true },
+    { key: "valor", label: "Valor (reserva)", required: true },
+    { key: "pago", label: "Pago (payout)", required: true },
+    { key: "taxa", label: "Taxa de serviço do anfitrião" },
+    { key: "codigo_ref", label: "Código de referência" },
+  ],
   faturamento: [
     { key: "anuncio", label: "Anúncio (extrai código)", required: true },
     { key: "check_in", label: "Data de início (check-in)", required: true },
     { key: "check_out", label: "Data de término (check-out)", required: true },
     { key: "hospedes", label: "Hóspede (nome)" },
     { key: "noites", label: "Noites" },
-    { key: "valor", label: "Valor", required: true },
+    { key: "valor", label: "Valor bruto", required: true },
+    { key: "taxa", label: "Taxa de serviço do anfitrião" },
+    { key: "valor_liq", label: "Valor líquido" },
   ],
   adiantamentos: [
     { key: "anuncio", label: "Anúncio (extrai código)", required: true },
@@ -32,6 +48,10 @@ const FIELD_OPTIONS: Record<Tipo, { key: string; label: string; required?: boole
     { key: "valor", label: "Valor", required: true },
   ],
 };
+
+function isSA7D(info: string): boolean {
+  return /SA7D/i.test(info ?? "");
+}
 
 // Extrai o código do imóvel de strings tipo "ANA104 - 2/4 Beira Mar..." ou "Atauá | Pé na Areia..."
 function extractCodigo(anuncio: string): string | null {
@@ -69,22 +89,43 @@ function parseNum(v: any): number {
   return isNaN(n) ? 0 : n;
 }
 
+type ValidationReport = {
+  totalLinhas: number;
+  reservasNovas: number;
+  reservasAtualizadas: number;
+  reservasDuplicadas: number;
+  payoutsNovos: number;
+  payoutsDuplicados: number;
+  adtNovos: number;
+  adtDuplicados: number;
+  somaPayouts: number;
+  somaPayoutsSA7D: number;
+  somaPayoutsInvestidores: number;
+  somaReservasBruto: number;
+  imoveisDesconhecidos: string[];
+  errosLinhas: string[];
+  divergencias: { codigo: string; check_in: string; antes: number; depois: number }[];
+  periodo: { inicio: string; fim: string } | null;
+};
+
 export default function Importar() {
-  const [tipo, setTipo] = useState<Tipo>("faturamento");
+  const [tipo, setTipo] = useState<Tipo>("extrato_completo");
   const [rows, setRows] = useState<any[]>([]);
   const [headers, setHeaders] = useState<string[]>([]);
   const [mapping, setMapping] = useState<Record<string, string>>({});
   const [imoveis, setImoveis] = useState<any[]>([]);
-  const [investidores, setInvestidores] = useState<any[]>([]);
   const [history, setHistory] = useState<any[]>([]);
   const [filename, setFilename] = useState("");
   const [sheetNames, setSheetNames] = useState<string[]>([]);
   const [activeSheet, setActiveSheet] = useState<string>("");
   const [workbook, setWorkbook] = useState<XLSX.WorkBook | null>(null);
+  const [fileKey, setFileKey] = useState(0); // força reset do <input file> após importação
+  const [validating, setValidating] = useState(false);
+  const [report, setReport] = useState<ValidationReport | null>(null);
+  const [importing, setImporting] = useState(false);
 
   useEffect(() => {
     supabase.from("imoveis").select("id, codigo, investidor_id").then(({ data }) => setImoveis(data ?? []));
-    supabase.from("investidores").select("id, nome").then(({ data }) => setInvestidores(data ?? []));
     loadHistory();
   }, []);
 
@@ -96,13 +137,19 @@ export default function Importar() {
   function applyAutoMapping(hs: string[], t: Tipo) {
     const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
     const matchers: Record<string, string[]> = {
+      tipo_linha: ["tipo"],
+      informacoes: ["informacoes", "informacao"],
       anuncio: ["anuncio", "rotulosdelinha", "imovel"],
       check_in: ["datadeinicio", "checkin", "inicio"],
       check_out: ["datadetermino", "checkout", "termino", "fim"],
       hospedes: ["hospede", "hospedes"],
       noites: ["noites", "diarias"],
-      valor: ["valor", "somadevalor", "valorbruto", "total"],
+      valor: ["ganhosbrutos", "valorbruto", "somadevalor", "total", "valor"],
+      pago: ["pago"],
+      taxa: ["taxadeservico", "taxadoanfitriao", "taxa", "servicefee", "hostfee"],
+      valor_liq: ["valorliquido", "liquido", "netliquido", "payout"],
       data: ["data", "datapagamento"],
+      codigo_ref: ["codigodereferencia", "referencia"],
     };
     const auto: Record<string, string> = {};
     FIELD_OPTIONS[t].forEach((f) => {
@@ -176,17 +223,327 @@ export default function Importar() {
     return m;
   }, [imoveis]);
 
-  async function importar() {
+  async function validar() {
     if (rows.length === 0) return toast.error("Carregue um arquivo");
     const required = FIELD_OPTIONS[tipo].filter((f) => f.required);
     for (const f of required) {
       if (!mapping[f.key]) return toast.error(`Mapeie o campo: ${f.label}`);
     }
+    setValidating(true);
+    try {
+      const r: ValidationReport = {
+        totalLinhas: rows.length,
+        reservasNovas: 0, reservasAtualizadas: 0, reservasDuplicadas: 0,
+        payoutsNovos: 0, payoutsDuplicados: 0,
+        adtNovos: 0, adtDuplicados: 0,
+        somaPayouts: 0, somaPayoutsSA7D: 0, somaPayoutsInvestidores: 0,
+        somaReservasBruto: 0,
+        imoveisDesconhecidos: [], errosLinhas: [], divergencias: [],
+        periodo: null,
+      };
+      const datasSet = new Set<string>();
+      const desconhecidos = new Set<string>();
+
+      // ── coleta agregada (mesma lógica do importar, mas sem inserir)
+      const aggReservas = new Map<string, { imovel_id: string; codigo: string; check_in: string; check_out: string; valor_bruto: number }>();
+      const payouts: { data: string; valor: number; recebedor: string; sa7d: boolean; codRef: string | null }[] = [];
+      const adts: { imovel_id: string; data: string; valor: number; sa7d: boolean }[] = [];
+
+      let curSA7D = false;
+      for (const row of rows) {
+        if (tipo === "extrato_completo") {
+          const tl = String(row[mapping.tipo_linha] ?? "").trim();
+          if (tl === "Payout") {
+            const data = parseDate(row[mapping.data]);
+            const pago = parseNum(row[mapping.pago]);
+            const info = String(row[mapping.informacoes] ?? "").trim();
+            const codRef = mapping.codigo_ref ? String(row[mapping.codigo_ref] ?? "").trim() || null : null;
+            curSA7D = isSA7D(info);
+            if (data && pago > 0) {
+              payouts.push({ data, valor: pago, recebedor: info, sa7d: curSA7D, codRef });
+              datasSet.add(data);
+            }
+          } else if (tl === "Reserva") {
+            const cod = extractCodigo(String(row[mapping.anuncio] ?? ""));
+            if (!cod) { r.errosLinhas.push("Linha sem código de imóvel"); continue; }
+            const im = codigoIndex.get(cod.toLowerCase());
+            if (!im) { desconhecidos.add(cod); continue; }
+            const ci = parseDate(row[mapping.check_in]); const co = parseDate(row[mapping.check_out]);
+            const dataPay = parseDate(row[mapping.data]);
+            const valor = parseNum(row[mapping.valor]);
+            if (!ci || !co || valor <= 0) { r.errosLinhas.push(`${cod}: data/valor inválido`); continue; }
+            const key = `${im.id}|${ci}|${co}`;
+            const ex = aggReservas.get(key);
+            if (ex) ex.valor_bruto += valor;
+            else aggReservas.set(key, { imovel_id: im.id, codigo: cod, check_in: ci, check_out: co, valor_bruto: valor });
+            if (im.investidor_id && dataPay) {
+              adts.push({ imovel_id: im.id, data: dataPay, valor, sa7d: curSA7D });
+              datasSet.add(dataPay);
+            }
+          }
+        } else {
+          const cod = extractCodigo(String(row[mapping.anuncio] ?? ""));
+          if (!cod) { r.errosLinhas.push("Linha sem código"); continue; }
+          const im = codigoIndex.get(cod.toLowerCase());
+          if (!im) { desconhecidos.add(cod); continue; }
+          if (tipo === "faturamento") {
+            const ci = parseDate(row[mapping.check_in]); const co = parseDate(row[mapping.check_out]);
+            const valor = parseNum(row[mapping.valor]);
+            if (!ci || !co || valor <= 0) { r.errosLinhas.push(`${cod}: dados inválidos`); continue; }
+            const key = `${im.id}|${ci}|${co}`;
+            const ex = aggReservas.get(key);
+            if (ex) ex.valor_bruto += valor;
+            else aggReservas.set(key, { imovel_id: im.id, codigo: cod, check_in: ci, check_out: co, valor_bruto: valor });
+          } else {
+            const data = parseDate(row[mapping.data]);
+            const valor = parseNum(row[mapping.valor]);
+            if (!data || valor <= 0 || !im.investidor_id) { r.errosLinhas.push(`${cod}: dados inválidos ou sem investidor`); continue; }
+            adts.push({ imovel_id: im.id, data, valor, sa7d: false });
+            datasSet.add(data);
+          }
+        }
+      }
+
+      r.imoveisDesconhecidos = [...desconhecidos];
+      r.somaPayouts = payouts.reduce((a, p) => a + p.valor, 0);
+      r.somaPayoutsSA7D = payouts.filter((p) => p.sa7d).reduce((a, p) => a + p.valor, 0);
+      r.somaPayoutsInvestidores = r.somaPayouts - r.somaPayoutsSA7D;
+      r.somaReservasBruto = [...aggReservas.values()].reduce((a, x) => a + x.valor_bruto, 0);
+
+      // ── período
+      const datas = [...datasSet].sort();
+      if (datas.length) r.periodo = { inicio: datas[0], fim: datas[datas.length - 1] };
+
+      // ── checa duplicatas/divergências de RESERVAS
+      const pendingRes = [...aggReservas.values()];
+      if (pendingRes.length) {
+        const imIds = [...new Set(pendingRes.map((x) => x.imovel_id))];
+        const cis = [...new Set(pendingRes.map((x) => x.check_in))];
+        const { data: existingR } = await supabase.from("reservas")
+          .select("imovel_id, check_in, check_out, valor_bruto")
+          .in("imovel_id", imIds).in("check_in", cis);
+        const exMap = new Map((existingR ?? []).map((x: any) => [`${x.imovel_id}|${x.check_in}|${x.check_out}`, x]));
+        for (const p of pendingRes) {
+          const ex = exMap.get(`${p.imovel_id}|${p.check_in}|${p.check_out}`);
+          if (!ex) r.reservasNovas++;
+          else if (Math.abs(Number(ex.valor_bruto) - p.valor_bruto) < 0.01) r.reservasDuplicadas++;
+          else {
+            r.reservasAtualizadas++;
+            r.divergencias.push({ codigo: p.codigo, check_in: p.check_in, antes: Number(ex.valor_bruto), depois: p.valor_bruto });
+          }
+        }
+      }
+
+      // ── checa duplicatas de PAYOUTS
+      if (payouts.length) {
+        const datasP = [...new Set(payouts.map((p) => p.data))];
+        const { data: existP } = await supabase.from("payouts")
+          .select("data, valor_pago, recebedor, codigo_referencia")
+          .in("data", datasP);
+        const exSet = new Set((existP ?? []).map((p: any) => `${p.data}|${Number(p.valor_pago).toFixed(2)}|${p.recebedor}|${p.codigo_referencia ?? ""}`));
+        for (const p of payouts) {
+          const k = `${p.data}|${p.valor.toFixed(2)}|${p.recebedor}|${p.codRef ?? ""}`;
+          if (exSet.has(k)) r.payoutsDuplicados++;
+          else { exSet.add(k); r.payoutsNovos++; }
+        }
+      }
+
+      // ── checa duplicatas de ADIANTAMENTOS
+      if (adts.length) {
+        const imIds = [...new Set(adts.map((a) => a.imovel_id))];
+        const datasA = [...new Set(adts.map((a) => a.data))];
+        const { data: existA } = await supabase.from("adiantamentos")
+          .select("imovel_id, data, valor").in("imovel_id", imIds).in("data", datasA);
+        const exSet = new Set((existA ?? []).map((a: any) => `${a.imovel_id}|${a.data}|${Number(a.valor).toFixed(2)}`));
+        for (const a of adts) {
+          const k = `${a.imovel_id}|${a.data}|${a.valor.toFixed(2)}`;
+          if (exSet.has(k)) r.adtDuplicados++;
+          else { exSet.add(k); r.adtNovos++; }
+        }
+      }
+
+      setReport(r);
+    } catch (e: any) {
+      toast.error(`Falha na validação: ${e?.message ?? e}`);
+    } finally {
+      setValidating(false);
+    }
+  }
+
+  async function importar() {
+    setImporting(true);
 
     let inseridos = 0, duplicados = 0, erros = 0;
     const errosDetalhe: string[] = [];
 
-    if (tipo === "faturamento") {
+    try {
+
+    if (tipo === "extrato_completo") {
+      // Formato Airbnb com Payouts + Reservas. Para cada Payout: cria registro em payouts.
+      // Para cada Reserva: cria reserva (faturamento) E adiantamento (marcando is_sa7d se o último Payout foi para SA7D LTDA).
+      type PendingReserva = {
+        imovel_id: string; check_in: string; check_out: string;
+        valor_bruto: number; taxas_airbnb: number; valor_liquido: number;
+        mes_competencia: string; codigo_airbnb: string | null;
+      };
+      type PendingPayout = {
+        data: string; valor_pago: number; recebedor: string;
+        is_sa7d: boolean; codigo_referencia: string | null;
+      };
+      type PendingAdt = {
+        investidor_id: string; imovel_id: string; data: string;
+        valor: number; mes_competencia: string; recebedor: string; is_sa7d: boolean;
+      };
+
+      const aggReservas = new Map<string, PendingReserva>();
+      const pendingPayouts: PendingPayout[] = [];
+      const pendingAdt: PendingAdt[] = [];
+      let currentRecebedor = "";
+      let currentSA7D = false;
+
+      for (const row of rows) {
+        const tipoLinha = String(row[mapping.tipo_linha] ?? "").trim();
+        if (tipoLinha === "Payout") {
+          const data = parseDate(row[mapping.data]);
+          const pago = parseNum(row[mapping.pago]);
+          const info = String(row[mapping.informacoes] ?? "").trim();
+          const codRef = mapping.codigo_ref ? String(row[mapping.codigo_ref] ?? "").trim() || null : null;
+          currentRecebedor = info;
+          currentSA7D = isSA7D(info);
+          if (data && pago > 0) {
+            pendingPayouts.push({ data, valor_pago: pago, recebedor: info, is_sa7d: currentSA7D, codigo_referencia: codRef });
+          }
+        } else if (tipoLinha === "Reserva") {
+          const anuncio = row[mapping.anuncio];
+          const codigo = extractCodigo(String(anuncio ?? ""));
+          if (!codigo) { erros++; continue; }
+          const im = codigoIndex.get(codigo.toLowerCase());
+          if (!im) { erros++; if (errosDetalhe.length < 5) errosDetalhe.push(`Imóvel não encontrado: ${codigo}`); continue; }
+          const checkIn = parseDate(row[mapping.check_in]);
+          const checkOut = parseDate(row[mapping.check_out]);
+          const dataPay = parseDate(row[mapping.data]); // data do payout associado
+          const valor = parseNum(row[mapping.valor]);
+          if (!checkIn || !checkOut || valor <= 0) { erros++; continue; }
+          const taxa = mapping.taxa ? Math.abs(parseNum(row[mapping.taxa])) : 0;
+          const valorLiquido = valor - taxa;
+
+          // 1) Reserva (agrega múltiplas linhas da mesma reserva)
+          const key = `${im.id}|${checkIn}|${checkOut}`;
+          const ex = aggReservas.get(key);
+          if (ex) {
+            ex.valor_bruto += valor; ex.taxas_airbnb += taxa; ex.valor_liquido += valorLiquido;
+          } else {
+            aggReservas.set(key, {
+              imovel_id: im.id, check_in: checkIn, check_out: checkOut,
+              valor_bruto: valor, taxas_airbnb: taxa, valor_liquido: valorLiquido,
+              mes_competencia: `${checkOut.slice(0, 7)}-01`, codigo_airbnb: null,
+            });
+          }
+
+          // 2) Adiantamento (1 por linha de reserva, ligada ao payout corrente)
+          if (im.investidor_id && dataPay) {
+            pendingAdt.push({
+              investidor_id: im.investidor_id, imovel_id: im.id, data: dataPay,
+              valor, mes_competencia: `${dataPay.slice(0, 7)}-01`,
+              recebedor: currentRecebedor, is_sa7d: currentSA7D,
+            });
+          }
+        }
+      }
+
+      // ── PAYOUTS: insert com upsert manual via dedup
+      if (pendingPayouts.length > 0) {
+        const datas = [...new Set(pendingPayouts.map((p) => p.data))];
+        const { data: existingP } = await supabase.from("payouts")
+          .select("data, valor_pago, recebedor, codigo_referencia")
+          .in("data", datas);
+        const existSet = new Set((existingP ?? []).map((p: any) =>
+          `${p.data}|${Number(p.valor_pago).toFixed(2)}|${p.recebedor}|${p.codigo_referencia ?? ""}`));
+        const toInsP = pendingPayouts.filter((p) => {
+          const k = `${p.data}|${p.valor_pago.toFixed(2)}|${p.recebedor}|${p.codigo_referencia ?? ""}`;
+          if (existSet.has(k)) { duplicados++; return false; }
+          existSet.add(k); return true;
+        });
+        const CHUNK = 500;
+        for (let i = 0; i < toInsP.length; i += CHUNK) {
+          const chunk = toInsP.slice(i, i + CHUNK);
+          const { error } = await supabase.from("payouts").insert(chunk);
+          if (error) { erros += chunk.length; if (errosDetalhe.length < 5) errosDetalhe.push(error.message); }
+          else inseridos += chunk.length;
+        }
+      }
+
+      // ── RESERVAS
+      const pending: PendingReserva[] = Array.from(aggReservas.values());
+      if (pending.length > 0) {
+        const imovelIds = [...new Set(pending.map((r) => r.imovel_id))];
+        const checkIns = [...new Set(pending.map((r) => r.check_in))];
+        const { data: existing } = await supabase.from("reservas")
+          .select("id, imovel_id, check_in, check_out, valor_bruto")
+          .in("imovel_id", imovelIds).in("check_in", checkIns);
+        const existingMap = new Map(
+          (existing ?? []).map((r) => [`${r.imovel_id}|${r.check_in}|${r.check_out}`, r])
+        );
+        const toInsert: PendingReserva[] = [];
+        const toUpdate: { id: string; r: PendingReserva }[] = [];
+        for (const r of pending) {
+          const ex = existingMap.get(`${r.imovel_id}|${r.check_in}|${r.check_out}`);
+          if (!ex) toInsert.push(r);
+          else if (Math.abs(Number(ex.valor_bruto) - r.valor_bruto) < 0.01) duplicados++;
+          else toUpdate.push({ id: ex.id, r });
+        }
+        const CHUNK = 500;
+        for (let i = 0; i < toInsert.length; i += CHUNK) {
+          const chunk = toInsert.slice(i, i + CHUNK);
+          const { error } = await supabase.from("reservas").insert(chunk.map((r) => ({ ...r, hospedes: 1 })));
+          if (error) { erros += chunk.length; if (errosDetalhe.length < 5) errosDetalhe.push(error.message); }
+          else inseridos += chunk.length;
+        }
+        for (const u of toUpdate) {
+          const { error } = await supabase.from("reservas")
+            .update({ valor_bruto: u.r.valor_bruto, taxas_airbnb: u.r.taxas_airbnb, valor_liquido: u.r.valor_liquido })
+            .eq("id", u.id);
+          if (error) { erros++; if (errosDetalhe.length < 5) errosDetalhe.push(error.message); }
+          else inseridos++;
+        }
+      }
+
+      // ── ADIANTAMENTOS (com is_sa7d)
+      if (pendingAdt.length > 0) {
+        const imovelIds = [...new Set(pendingAdt.map((r) => r.imovel_id))];
+        const datas = [...new Set(pendingAdt.map((r) => r.data))];
+        const { data: existingAdt } = await supabase.from("adiantamentos")
+          .select("imovel_id, data, valor")
+          .in("imovel_id", imovelIds).in("data", datas);
+        const existingAdtSet = new Set(
+          (existingAdt ?? []).map((r: any) => `${r.imovel_id}|${r.data}|${Number(r.valor).toFixed(2)}`)
+        );
+        const toInsertAdt: PendingAdt[] = [];
+        for (const r of pendingAdt) {
+          const k = `${r.imovel_id}|${r.data}|${r.valor.toFixed(2)}`;
+          if (existingAdtSet.has(k)) { duplicados++; continue; }
+          existingAdtSet.add(k);
+          toInsertAdt.push(r);
+        }
+        const CHUNK = 500;
+        for (let i = 0; i < toInsertAdt.length; i += CHUNK) {
+          const chunk = toInsertAdt.slice(i, i + CHUNK);
+          const { error } = await supabase.from("adiantamentos").insert(
+            chunk.map((r) => ({ ...r, origem: "airbnb_direto" as const }))
+          );
+          if (error) { erros += chunk.length; if (errosDetalhe.length < 5) errosDetalhe.push(error.message); }
+          else inseridos += chunk.length;
+        }
+      }
+    } else if (tipo === "faturamento") {
+      type PendingReserva = {
+        imovel_id: string; check_in: string; check_out: string;
+        valor_bruto: number; taxas_airbnb: number; valor_liquido: number;
+        mes_competencia: string; codigo_airbnb: string | null;
+      };
+      // Agrega múltiplas linhas da mesma reserva (Airbnb pode quebrar 1 reserva em vários lançamentos)
+      const aggMap = new Map<string, PendingReserva>();
+
       for (const row of rows) {
         const anuncio = row[mapping.anuncio];
         const codigo = extractCodigo(String(anuncio ?? ""));
@@ -198,54 +555,146 @@ export default function Importar() {
         if (!checkIn || !checkOut) { erros++; continue; }
         const valor = parseNum(row[mapping.valor]);
         if (valor <= 0) { erros++; continue; }
-        const competencia = `${checkOut.slice(0, 7)}-01`;
+        const taxa = mapping.taxa ? Math.abs(parseNum(row[mapping.taxa])) : 0;
+        const valorLiqRaw = mapping.valor_liq ? parseNum(row[mapping.valor_liq]) : 0;
+        const valorLiquido = valorLiqRaw > 0 ? valorLiqRaw : valor - taxa;
         const hospede = mapping.hospedes ? String(row[mapping.hospedes] ?? "").trim() : "";
-
-        // dedupe por (imóvel, check_in, check_out, valor)
-        const { data: dup } = await supabase.from("reservas").select("id")
-          .eq("imovel_id", im.id).eq("check_in", checkIn).eq("check_out", checkOut)
-          .eq("valor_bruto", valor).maybeSingle();
-        if (dup) { duplicados++; continue; }
-
-        const { error } = await supabase.from("reservas").insert({
-          codigo_airbnb: hospede ? hospede.slice(0, 60) : null,
-          imovel_id: im.id, check_in: checkIn, check_out: checkOut,
-          hospedes: 1, valor_bruto: valor, taxas_airbnb: 0, valor_liquido: valor,
-          mes_competencia: competencia,
-        });
-        if (error) { erros++; if (errosDetalhe.length < 5) errosDetalhe.push(error.message); }
-        else inseridos++;
+        const key = `${im.id}|${checkIn}|${checkOut}`;
+        const ex = aggMap.get(key);
+        if (ex) {
+          ex.valor_bruto += valor;
+          ex.taxas_airbnb += taxa;
+          ex.valor_liquido += valorLiquido;
+        } else {
+          aggMap.set(key, {
+            imovel_id: im.id, check_in: checkIn, check_out: checkOut,
+            valor_bruto: valor, taxas_airbnb: taxa, valor_liquido: valorLiquido,
+            mes_competencia: `${checkOut.slice(0, 7)}-01`,
+            codigo_airbnb: hospede ? hospede.slice(0, 60) : null,
+          });
+        }
       }
-    } else {
+      const pending: PendingReserva[] = Array.from(aggMap.values());
+
+      if (pending.length > 0) {
+        // dedupe: busca reservas existentes pelas mesmas chaves (imovel, check_in, check_out)
+        const imovelIds = [...new Set(pending.map((r) => r.imovel_id))];
+        const checkIns = [...new Set(pending.map((r) => r.check_in))];
+        const { data: existing } = await supabase.from("reservas")
+          .select("id, imovel_id, check_in, check_out, valor_bruto")
+          .in("imovel_id", imovelIds).in("check_in", checkIns);
+        const existingMap = new Map(
+          (existing ?? []).map((r) => [`${r.imovel_id}|${r.check_in}|${r.check_out}`, r])
+        );
+
+        const toInsert: PendingReserva[] = [];
+        const toUpdate: { id: string; r: PendingReserva }[] = [];
+        for (const r of pending) {
+          const ex = existingMap.get(`${r.imovel_id}|${r.check_in}|${r.check_out}`);
+          if (!ex) {
+            toInsert.push(r);
+          } else if (Math.abs(Number(ex.valor_bruto) - r.valor_bruto) < 0.01) {
+            duplicados++;
+          } else {
+            toUpdate.push({ id: ex.id, r });
+          }
+        }
+
+        // INSERT em chunks de 500
+        const CHUNK = 500;
+        for (let i = 0; i < toInsert.length; i += CHUNK) {
+          const chunk = toInsert.slice(i, i + CHUNK);
+          const { error } = await supabase.from("reservas").insert(
+            chunk.map((r) => ({ ...r, hospedes: 1 }))
+          );
+          if (error) {
+            erros += chunk.length;
+            if (errosDetalhe.length < 5) errosDetalhe.push(error.message);
+          } else {
+            inseridos += chunk.length;
+          }
+        }
+
+        // UPDATE valores divergentes (mesma reserva, valor mudou)
+        for (const u of toUpdate) {
+          const { error } = await supabase.from("reservas")
+            .update({ valor_bruto: u.r.valor_bruto, taxas_airbnb: u.r.taxas_airbnb, valor_liquido: u.r.valor_liquido })
+            .eq("id", u.id);
+          if (error) { erros++; if (errosDetalhe.length < 5) errosDetalhe.push(error.message); }
+          else inseridos++;
+        }
+      }
+      // ── Adiantamentos: parse → dedupe em lote → batch insert ──
+      type PendingAdt = {
+        investidor_id: string; imovel_id: string;
+        data: string; valor: number; mes_competencia: string;
+      };
+      const pendingAdt: PendingAdt[] = [];
+
       for (const row of rows) {
         const anuncio = row[mapping.anuncio];
         const codigo = extractCodigo(String(anuncio ?? ""));
         if (!codigo) { erros++; continue; }
         const im = codigoIndex.get(codigo.toLowerCase());
         if (!im) { erros++; if (errosDetalhe.length < 5) errosDetalhe.push(`Imóvel não encontrado: ${codigo}`); continue; }
+        if (!im.investidor_id) { erros++; if (errosDetalhe.length < 5) errosDetalhe.push(`Imóvel sem investidor: ${codigo}`); continue; }
         const data = parseDate(row[mapping.data]);
         const valor = parseNum(row[mapping.valor]);
-        if (!data || valor <= 0) { erros++; continue; }
-        const competencia = `${data.slice(0, 7)}-01`;
-        const { error } = await supabase.from("adiantamentos").insert({
-          investidor_id: im.investidor_id, imovel_id: im.id,
-          data, valor, origem: "airbnb_direto", mes_competencia: competencia,
-        });
-        if (error) { erros++; if (errosDetalhe.length < 5) errosDetalhe.push(error.message); }
-        else inseridos++;
+        if (!data) { erros++; if (errosDetalhe.length < 5) errosDetalhe.push(`Data inválida na linha de ${codigo}`); continue; }
+        if (valor <= 0) { erros++; if (errosDetalhe.length < 5) errosDetalhe.push(`Valor inválido na linha de ${codigo}`); continue; }
+        pendingAdt.push({ investidor_id: im.investidor_id, imovel_id: im.id, data, valor, mes_competencia: `${data.slice(0, 7)}-01` });
+      }
+
+      if (pendingAdt.length > 0) {
+        const imovelIds = [...new Set(pendingAdt.map((r) => r.imovel_id))];
+        const datas = [...new Set(pendingAdt.map((r) => r.data))];
+        const { data: existingAdt } = await supabase.from("adiantamentos")
+          .select("imovel_id, data, valor")
+          .in("imovel_id", imovelIds).in("data", datas);
+        const existingAdtSet = new Set(
+          (existingAdt ?? []).map((r) => `${r.imovel_id}|${r.data}|${r.valor}`)
+        );
+
+        const toInsertAdt: PendingAdt[] = [];
+        for (const r of pendingAdt) {
+          if (existingAdtSet.has(`${r.imovel_id}|${r.data}|${r.valor}`)) { duplicados++; }
+          else { toInsertAdt.push(r); }
+        }
+
+        const CHUNK = 500;
+        for (let i = 0; i < toInsertAdt.length; i += CHUNK) {
+          const chunk = toInsertAdt.slice(i, i + CHUNK);
+          const { error } = await supabase.from("adiantamentos").insert(
+            chunk.map((r) => ({ ...r, origem: "airbnb_direto" as const }))
+          );
+          if (error) { erros += chunk.length; if (errosDetalhe.length < 5) errosDetalhe.push(error.message); }
+          else inseridos += chunk.length;
+        }
       }
     }
 
-    await supabase.from("importacoes_airbnb").insert({
-      tipo, arquivo: filename, total_linhas: rows.length, inseridos, duplicados, erros,
-    });
-
-    if (erros > 0 && errosDetalhe.length) {
-      toast.warning(`Concluído com erros. Ex.: ${errosDetalhe.join(" | ")}`);
+    } catch (err: any) {
+      erros += rows.length - inseridos - duplicados;
+      errosDetalhe.push(err?.message ?? "Erro inesperado");
+      toast.error(`Erro na importação: ${err?.message ?? "Erro inesperado"}`);
+    } finally {
+      const { error: logErr } = await supabase.from("importacoes_airbnb").insert({
+        tipo, arquivo: filename, total_linhas: rows.length, inseridos, duplicados, erros,
+      });
+      if (logErr) console.error("Falha ao salvar histórico:", logErr.message);
+      if (inseridos > 0) {
+        toast.success(`Importação: ${inseridos} inseridos, ${duplicados} duplicados, ${erros} erros`);
+      } else if (duplicados > 0 && erros === 0) {
+        toast.info(`Tudo já estava importado: ${duplicados} duplicados.`);
+      } else if (erros > 0) {
+        toast.warning(`Nenhuma linha inserida. ${erros} erros. Ex.: ${errosDetalhe.slice(0, 3).join(" | ")}`);
+      }
+      setRows([]); setHeaders([]); setMapping({}); setFilename(""); setWorkbook(null); setSheetNames([]); setActiveSheet("");
+      setFileKey((k) => k + 1);
+      setReport(null);
+      setImporting(false);
+      loadHistory();
     }
-    toast.success(`Importação: ${inseridos} inseridos, ${duplicados} duplicados, ${erros} erros`);
-    setRows([]); setHeaders([]); setMapping({}); setFilename(""); setWorkbook(null); setSheetNames([]); setActiveSheet("");
-    loadHistory();
   }
 
   return (
@@ -254,11 +703,12 @@ export default function Importar() {
       <div className="space-y-4 p-6">
         <Tabs value={tipo} onValueChange={(v) => { setTipo(v as Tipo); setRows([]); setHeaders([]); setMapping({}); setWorkbook(null); setSheetNames([]); }}>
           <TabsList>
-            <TabsTrigger value="faturamento">Faturamento (Base Total)</TabsTrigger>
-            <TabsTrigger value="adiantamentos">Adiantamentos pagos</TabsTrigger>
+            <TabsTrigger value="extrato_completo">Extrato Airbnb (CSV completo)</TabsTrigger>
+            <TabsTrigger value="faturamento">Faturamento (legado)</TabsTrigger>
+            <TabsTrigger value="adiantamentos">Adiantamentos (legado)</TabsTrigger>
           </TabsList>
 
-          {(["faturamento", "adiantamentos"] as Tipo[]).map((t) => (
+          {(["extrato_completo", "faturamento", "adiantamentos"] as Tipo[]).map((t) => (
             <TabsContent key={t} value={t} className="space-y-4">
               <Card className="shadow-card">
                 <CardHeader><CardTitle className="text-base">1. Selecione o arquivo (.csv ou .xlsx)</CardTitle></CardHeader>
@@ -266,7 +716,7 @@ export default function Importar() {
                   <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/30 px-6 py-10 text-center hover:bg-muted/50">
                     <Upload className="mb-2 h-6 w-6 text-muted-foreground" />
                     <span className="text-sm text-muted-foreground">{filename || "Clique para enviar .csv ou .xlsx"}</span>
-                    <Input type="file" accept=".csv,.xlsx,.xls,text/csv" className="hidden" onChange={onFile} />
+                    <Input key={fileKey} type="file" accept=".csv,.xlsx,.xls,text/csv" className="hidden" onChange={onFile} />
                   </label>
                   {sheetNames.length > 1 && (
                     <div className="space-y-1.5 max-w-sm">
@@ -304,7 +754,7 @@ export default function Importar() {
                     <CardHeader>
                       <CardTitle className="text-base flex items-center justify-between">
                         <span>3. Preview ({rows.length} linhas)</span>
-                        <Button onClick={importar}><FileSpreadsheet className="mr-2 h-4 w-4" />Confirmar importação</Button>
+                        <Button onClick={validar} disabled={validating}><FileSpreadsheet className="mr-2 h-4 w-4" />{validating ? "Validando..." : "Validar e revisar"}</Button>
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="p-0">
@@ -327,7 +777,7 @@ export default function Importar() {
                                   </TableCell>
                                   {FIELD_OPTIONS[t].map((f) => {
                                     const raw = r[mapping[f.key]];
-                                    const isVal = ["valor"].includes(f.key);
+                                    const isVal = ["valor", "taxa", "valor_liq"].includes(f.key);
                                     const isDate = ["check_in", "check_out", "data"].includes(f.key);
                                     return <TableCell key={f.key} className={isVal ? "num" : ""}>
                                       {isVal ? brl(parseNum(raw)) : isDate ? (parseDate(raw) ? dateBR(parseDate(raw)!) : String(raw ?? "—")) : String(raw ?? "—")}
@@ -373,6 +823,116 @@ export default function Importar() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={!!report} onOpenChange={(o) => !o && setReport(null)}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {report && (report.imoveisDesconhecidos.length || report.errosLinhas.length || report.divergencias.length)
+                ? <ShieldAlert className="h-5 w-5 text-warning" />
+                : <ShieldCheck className="h-5 w-5 text-success" />}
+              Resumo da validação
+            </DialogTitle>
+            <DialogDescription>
+              {report?.periodo
+                ? `Período detectado: ${dateBR(report.periodo.inicio)} a ${dateBR(report.periodo.fim)}`
+                : "Revise os ajustes antes de confirmar a importação."}
+            </DialogDescription>
+          </DialogHeader>
+
+          {report && (
+            <div className="space-y-4 text-sm">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <div className="rounded-lg border p-3">
+                  <div className="text-xs text-muted-foreground">Total de linhas</div>
+                  <div className="text-lg font-semibold">{report.totalLinhas}</div>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <div className="text-xs text-muted-foreground">Faturamento (payouts)</div>
+                  <div className="text-lg font-semibold">{brl(report.somaPayouts)}</div>
+                  <div className="text-xs text-muted-foreground">SA7D: {brl(report.somaPayoutsSA7D)} · Inv: {brl(report.somaPayoutsInvestidores)}</div>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <div className="text-xs text-muted-foreground">Reservas (bruto)</div>
+                  <div className="text-lg font-semibold">{brl(report.somaReservasBruto)}</div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3 text-xs">
+                <div className="rounded-lg border p-3">
+                  <div className="font-medium mb-1">Reservas</div>
+                  <div className="text-success">+ {report.reservasNovas} novas</div>
+                  <div className="text-warning">~ {report.reservasAtualizadas} atualizadas</div>
+                  <div className="text-muted-foreground">= {report.reservasDuplicadas} duplicadas</div>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <div className="font-medium mb-1">Payouts</div>
+                  <div className="text-success">+ {report.payoutsNovos} novos</div>
+                  <div className="text-muted-foreground">= {report.payoutsDuplicados} duplicados</div>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <div className="font-medium mb-1">Adiantamentos</div>
+                  <div className="text-success">+ {report.adtNovos} novos</div>
+                  <div className="text-muted-foreground">= {report.adtDuplicados} duplicados</div>
+                </div>
+              </div>
+
+              {report.imoveisDesconhecidos.length > 0 && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Imóveis não cadastrados ({report.imoveisDesconhecidos.length})</AlertTitle>
+                  <AlertDescription className="text-xs">
+                    {report.imoveisDesconhecidos.slice(0, 20).join(", ")}
+                    {report.imoveisDesconhecidos.length > 20 && ` +${report.imoveisDesconhecidos.length - 20}`}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {report.divergencias.length > 0 && (
+                <div className="rounded-lg border">
+                  <div className="border-b bg-muted/30 p-2 text-xs font-medium">Divergências de valor ({report.divergencias.length})</div>
+                  <div className="max-h-40 overflow-y-auto">
+                    <Table>
+                      <TableHeader><TableRow>
+                        <TableHead>Imóvel</TableHead><TableHead>Check-in</TableHead>
+                        <TableHead className="num">Antes</TableHead><TableHead className="num">Depois</TableHead>
+                      </TableRow></TableHeader>
+                      <TableBody>
+                        {report.divergencias.slice(0, 30).map((d, i) => (
+                          <TableRow key={i}>
+                            <TableCell>{d.codigo}</TableCell>
+                            <TableCell>{dateBR(d.check_in)}</TableCell>
+                            <TableCell className="num">{brl(d.antes)}</TableCell>
+                            <TableCell className="num text-warning">{brl(d.depois)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )}
+
+              {report.errosLinhas.length > 0 && (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Linhas com problemas ({report.errosLinhas.length})</AlertTitle>
+                  <AlertDescription className="text-xs">
+                    {report.errosLinhas.slice(0, 5).join(" · ")}
+                    {report.errosLinhas.length > 5 && ` +${report.errosLinhas.length - 5}`}
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReport(null)} disabled={importing}>Cancelar</Button>
+            <Button onClick={importar} disabled={importing}>
+              {importing ? "Importando..." : "Confirmar importação"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

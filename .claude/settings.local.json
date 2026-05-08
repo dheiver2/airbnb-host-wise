@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(node_modules/.bin/vite build *)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(git checkout *)",
+      "Bash(git merge claude/nervous-goodall-19b9b2 --no-ff -m ' *)"
+    ]
+  }
+}

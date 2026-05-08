@@ -21,9 +21,11 @@ export type Database = {
           id: string
           imovel_id: string | null
           investidor_id: string
+          is_sa7d: boolean
           mes_competencia: string
           observacoes: string | null
           origem: Database["public"]["Enums"]["origem_adiantamento"]
+          recebedor: string | null
           valor: number
         }
         Insert: {
@@ -32,9 +34,11 @@ export type Database = {
           id?: string
           imovel_id?: string | null
           investidor_id: string
+          is_sa7d?: boolean
           mes_competencia: string
           observacoes?: string | null
           origem?: Database["public"]["Enums"]["origem_adiantamento"]
+          recebedor?: string | null
           valor: number
         }
         Update: {
@@ -43,9 +47,11 @@ export type Database = {
           id?: string
           imovel_id?: string | null
           investidor_id?: string
+          is_sa7d?: boolean
           mes_competencia?: string
           observacoes?: string | null
           origem?: Database["public"]["Enums"]["origem_adiantamento"]
+          recebedor?: string | null
           valor?: number
         }
         Relationships: [
@@ -231,6 +237,8 @@ export type Database = {
       }
       manutencoes: {
         Row: {
+          anexos: Json | null
+          area: string | null
           categoria: string | null
           created_at: string
           custo: number
@@ -245,6 +253,8 @@ export type Database = {
           valor_cobrado: number
         }
         Insert: {
+          anexos?: Json | null
+          area?: string | null
           categoria?: string | null
           created_at?: string
           custo?: number
@@ -259,6 +269,8 @@ export type Database = {
           valor_cobrado?: number
         }
         Update: {
+          anexos?: Json | null
+          area?: string | null
           categoria?: string | null
           created_at?: string
           custo?: number
@@ -291,34 +303,84 @@ export type Database = {
       }
       parametros_servico: {
         Row: {
+          area: string | null
           ativo: boolean
           categoria: string | null
           created_at: string
           custo: number
+          faixas_hospedes: Json | null
           id: string
+          imovel_id: string | null
           nome: string
           updated_at: string
           valor_cobrado: number
         }
         Insert: {
+          area?: string | null
           ativo?: boolean
           categoria?: string | null
           created_at?: string
           custo?: number
+          faixas_hospedes?: Json | null
           id?: string
+          imovel_id?: string | null
           nome: string
           updated_at?: string
           valor_cobrado?: number
         }
         Update: {
+          area?: string | null
           ativo?: boolean
           categoria?: string | null
           created_at?: string
           custo?: number
+          faixas_hospedes?: Json | null
           id?: string
+          imovel_id?: string | null
           nome?: string
           updated_at?: string
           valor_cobrado?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parametros_servico_imovel_id_fkey"
+            columns: ["imovel_id"]
+            isOneToOne: false
+            referencedRelation: "imoveis"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payouts: {
+        Row: {
+          codigo_referencia: string | null
+          created_at: string
+          data: string
+          id: string
+          importacao_id: string | null
+          is_sa7d: boolean
+          recebedor: string
+          valor_pago: number
+        }
+        Insert: {
+          codigo_referencia?: string | null
+          created_at?: string
+          data: string
+          id?: string
+          importacao_id?: string | null
+          is_sa7d?: boolean
+          recebedor: string
+          valor_pago?: number
+        }
+        Update: {
+          codigo_referencia?: string | null
+          created_at?: string
+          data?: string
+          id?: string
+          importacao_id?: string | null
+          is_sa7d?: boolean
+          recebedor?: string
+          valor_pago?: number
         }
         Relationships: []
       }
@@ -401,6 +463,8 @@ export type Database = {
       }
       servicos_operacionais: {
         Row: {
+          anexos: Json | null
+          area: string | null
           created_at: string
           custo_real: number
           data: string
@@ -408,12 +472,15 @@ export type Database = {
           imovel_id: string
           mes_competencia: string
           observacoes: string | null
+          parametro_id: string | null
           prestador: string | null
           reserva_id: string | null
           tipo: Database["public"]["Enums"]["tipo_servico_op"]
           valor_cobrado: number
         }
         Insert: {
+          anexos?: Json | null
+          area?: string | null
           created_at?: string
           custo_real?: number
           data: string
@@ -421,12 +488,15 @@ export type Database = {
           imovel_id: string
           mes_competencia: string
           observacoes?: string | null
+          parametro_id?: string | null
           prestador?: string | null
           reserva_id?: string | null
           tipo: Database["public"]["Enums"]["tipo_servico_op"]
           valor_cobrado?: number
         }
         Update: {
+          anexos?: Json | null
+          area?: string | null
           created_at?: string
           custo_real?: number
           data?: string
@@ -434,6 +504,7 @@ export type Database = {
           imovel_id?: string
           mes_competencia?: string
           observacoes?: string | null
+          parametro_id?: string | null
           prestador?: string | null
           reserva_id?: string | null
           tipo?: Database["public"]["Enums"]["tipo_servico_op"]
@@ -445,6 +516,13 @@ export type Database = {
             columns: ["imovel_id"]
             isOneToOne: false
             referencedRelation: "imoveis"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "servicos_operacionais_parametro_id_fkey"
+            columns: ["parametro_id"]
+            isOneToOne: false
+            referencedRelation: "parametros_servico"
             referencedColumns: ["id"]
           },
           {
@@ -482,6 +560,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _reimport_airbnb: {
+        Args: { p_adt: Json; p_res: Json }
+        Returns: {
+          adt_atualizados: number
+          adt_inseridos: number
+          reservas_atualizadas: number
+          reservas_inseridas: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

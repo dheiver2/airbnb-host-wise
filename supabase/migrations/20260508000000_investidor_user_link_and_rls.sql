@@ -96,3 +96,65 @@ CREATE POLICY servicos_op_investidor_select
        WHERE investidor_id = private.investidor_id(auth.uid())
     )
   );
+
+-- =============================================================
+-- 4) Vínculo automático por email
+-- Quando um usuário se cadastra com um email que já está em
+-- public.investidores.email (e o investidor ainda não tem user_id),
+-- o link é feito automaticamente. Vale também na direção oposta:
+-- ao criar/editar um investidor com email de um usuário existente.
+-- =============================================================
+
+CREATE OR REPLACE FUNCTION public.link_investidor_to_user()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  -- Caso tenha vindo de auth.users: NEW.email + NEW.id
+  IF TG_TABLE_NAME = 'users' AND TG_TABLE_SCHEMA = 'auth' THEN
+    UPDATE public.investidores
+       SET user_id = NEW.id
+     WHERE user_id IS NULL
+       AND email IS NOT NULL
+       AND lower(email) = lower(NEW.email);
+    RETURN NEW;
+  END IF;
+
+  -- Caso tenha vindo de public.investidores: NEW.email
+  IF TG_TABLE_NAME = 'investidores' AND TG_TABLE_SCHEMA = 'public' THEN
+    IF NEW.user_id IS NULL AND NEW.email IS NOT NULL THEN
+      SELECT id INTO NEW.user_id
+        FROM auth.users
+       WHERE lower(email) = lower(NEW.email)
+       LIMIT 1;
+    END IF;
+    RETURN NEW;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+-- Trigger 1: novo usuário criado / email alterado → tenta vincular
+DROP TRIGGER IF EXISTS tg_link_investidor_after_user_insert ON auth.users;
+CREATE TRIGGER tg_link_investidor_after_user_insert
+AFTER INSERT OR UPDATE OF email ON auth.users
+FOR EACH ROW
+EXECUTE FUNCTION public.link_investidor_to_user();
+
+-- Trigger 2: novo investidor criado / email alterado → tenta vincular
+DROP TRIGGER IF EXISTS tg_link_investidor_before_insert ON public.investidores;
+CREATE TRIGGER tg_link_investidor_before_insert
+BEFORE INSERT OR UPDATE OF email, user_id ON public.investidores
+FOR EACH ROW
+EXECUTE FUNCTION public.link_investidor_to_user();
+
+-- Vínculo retroativo: para investidores e usuários que já existem
+UPDATE public.investidores i
+   SET user_id = u.id
+  FROM auth.users u
+ WHERE i.user_id IS NULL
+   AND i.email IS NOT NULL
+   AND lower(i.email) = lower(u.email);

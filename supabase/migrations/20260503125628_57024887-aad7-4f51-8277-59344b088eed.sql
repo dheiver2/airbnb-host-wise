@@ -1,0 +1,1 @@
+ALTER TABLE public.parametros_servico ADD COLUMN IF NOT EXISTS faixas_hospedes jsonb;

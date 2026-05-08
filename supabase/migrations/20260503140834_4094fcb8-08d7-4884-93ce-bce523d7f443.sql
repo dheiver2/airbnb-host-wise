@@ -1,0 +1,1 @@
+DELETE FROM reservas WHERE check_out >= '2026-04-01' AND check_out < '2026-06-01';

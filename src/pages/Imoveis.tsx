@@ -14,10 +14,12 @@ import { toast } from "sonner";
 import { brl } from "@/lib/format";
 import { Combobox } from "@/components/Combobox";
 import { Link, useSearchParams } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
 const TIPOS = ["studio", "1Q", "2Q", "3Q", "cobertura"] as const;
 
 export default function Imoveis() {
+  const { isAdmin } = useAuth();
   const [list, setList] = useState<any[]>([]);
   const [investidores, setInvestidores] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
@@ -65,8 +67,8 @@ export default function Imoveis() {
     <>
       <PageHeader
         title="Imóveis"
-        description="Cadastro dos imóveis administrados, com parâmetros financeiros."
-        actions={
+        description={isAdmin ? "Cadastro dos imóveis administrados, com parâmetros financeiros." : "Visualização dos imóveis (somente leitura)."}
+        actions={isAdmin ? (
           <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setEditing(null); }}>
             <DialogTrigger asChild>
               <Button onClick={() => setEditing({ tipo: "studio", percentual_comissao: 20, capacidade: 2, status: "ativo" })}>
@@ -116,7 +118,7 @@ export default function Imoveis() {
               <DialogFooter><Button onClick={save}>Salvar</Button></DialogFooter>
             </DialogContent>
           </Dialog>
-        }
+        ) : null}
       />
       <div className="space-y-4 p-6">
         <div className="flex flex-wrap items-center gap-2">
@@ -157,10 +159,12 @@ export default function Imoveis() {
                     <TableCell className="num">{i.percentual_comissao}%</TableCell>
                     <TableCell><Badge variant={i.status === "ativo" ? "default" : "secondary"}>{i.status}</Badge></TableCell>
                     <TableCell>
-                      <div className="flex gap-1">
-                        <Button size="icon" variant="ghost" onClick={() => { setEditing(i); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
-                        <Button size="icon" variant="ghost" onClick={() => remove(i.id)}><Trash2 className="h-4 w-4" /></Button>
-                      </div>
+                      {isAdmin ? (
+                        <div className="flex gap-1">
+                          <Button size="icon" variant="ghost" onClick={() => { setEditing(i); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                          <Button size="icon" variant="ghost" onClick={() => remove(i.id)}><Trash2 className="h-4 w-4" /></Button>
+                        </div>
+                      ) : <span className="text-xs text-muted-foreground">—</span>}
                     </TableCell>
                   </TableRow>
                 ))}

@@ -11,24 +11,47 @@ import { Switch } from "@/components/ui/switch";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { brl } from "@/lib/format";
+import { Combobox } from "@/components/Combobox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+const AREAS = ["faxina", "lavanderia", "logistica", "casa", "manutencao", "escritorio"] as const;
+const AREA_LABELS: Record<string, string> = {
+  faxina: "Faxina", lavanderia: "Lavanderia", logistica: "Logística",
+  casa: "Casa", manutencao: "Manutenção", escritorio: "Escritório",
+};
 
 export default function Parametros() {
   const [list, setList] = useState<any[]>([]);
+  const [imoveis, setImoveis] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
 
   useEffect(() => { load(); }, []);
   async function load() {
-    const { data } = await supabase.from("parametros_servico").select("*").order("nome");
+    const [{ data }, { data: im }] = await Promise.all([
+      supabase.from("parametros_servico").select("*, imoveis(codigo)").order("nome"),
+      supabase.from("imoveis").select("id, codigo, endereco").order("codigo"),
+    ]);
     setList(data ?? []);
+    setImoveis(im ?? []);
   }
+
+  const isLavanderia = (editing?.categoria ?? "").toLowerCase().includes("lavanderia");
 
   async function save() {
     if (!editing?.nome) return toast.error("Nome obrigatório");
-    const payload = {
+    const faixas = isLavanderia && editing?.faixas_hospedes
+      ? Object.fromEntries(
+          Object.entries(editing.faixas_hospedes).map(([k, v]: any) => [k, { custo: Number(v?.custo ?? 0), valor_cobrado: Number(v?.valor_cobrado ?? 0) }])
+        )
+      : null;
+    const payload: any = {
       nome: editing.nome, categoria: editing.categoria,
       custo: Number(editing.custo ?? 0), valor_cobrado: Number(editing.valor_cobrado ?? 0),
       ativo: editing.ativo ?? true,
+      imovel_id: editing.imovel_id || null,
+      area: editing.area || null,
+      faixas_hospedes: faixas,
     };
     const res = editing.id ? await supabase.from("parametros_servico").update(payload).eq("id", editing.id) : await supabase.from("parametros_servico").insert(payload);
     if (res.error) return toast.error(res.error.message);
@@ -56,10 +79,46 @@ export default function Parametros() {
               <div className="grid gap-3">
                 <div className="space-y-1.5"><Label>Nome *</Label><Input value={editing?.nome ?? ""} onChange={(e) => setEditing({ ...editing, nome: e.target.value })} /></div>
                 <div className="space-y-1.5"><Label>Categoria</Label><Input placeholder="ex: Hidráulica, Elétrica..." value={editing?.categoria ?? ""} onChange={(e) => setEditing({ ...editing, categoria: e.target.value })} /></div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5"><Label>Custo</Label><Input type="number" step="0.01" value={editing?.custo ?? 0} onChange={(e) => setEditing({ ...editing, custo: e.target.value })} /></div>
-                  <div className="space-y-1.5"><Label>Valor cobrado</Label><Input type="number" step="0.01" value={editing?.valor_cobrado ?? 0} onChange={(e) => setEditing({ ...editing, valor_cobrado: e.target.value })} /></div>
+                <div className="space-y-1.5">
+                  <Label>Imóvel</Label>
+                  <Combobox
+                    clearable
+                    placeholder="Todos"
+                    className="w-full sm:w-full"
+                    options={imoveis.map((i) => ({ value: i.id, label: i.codigo, hint: i.endereco }))}
+                    value={editing?.imovel_id ?? ""}
+                    onChange={(v) => setEditing({ ...editing, imovel_id: v })}
+                  />
                 </div>
+                <div className="space-y-1.5">
+                  <Label>Área</Label>
+                  <Select value={editing?.area ?? ""} onValueChange={(v) => setEditing({ ...editing, area: v })}>
+                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectContent>{AREAS.map((a) => <SelectItem key={a} value={a}>{AREA_LABELS[a]}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5"><Label>Custo {isLavanderia && <span className="text-muted-foreground text-xs">(base)</span>}</Label><Input type="number" step="0.01" value={editing?.custo ?? 0} onChange={(e) => setEditing({ ...editing, custo: e.target.value })} /></div>
+                  <div className="space-y-1.5"><Label>Valor cobrado {isLavanderia && <span className="text-muted-foreground text-xs">(base)</span>}</Label><Input type="number" step="0.01" value={editing?.valor_cobrado ?? 0} onChange={(e) => setEditing({ ...editing, valor_cobrado: e.target.value })} /></div>
+                </div>
+                {isLavanderia && (
+                  <div className="space-y-2 rounded-md border p-3">
+                    <Label className="text-sm">Faixas por nº de hóspedes</Label>
+                    <div className="grid grid-cols-[60px_1fr_1fr] gap-2 text-xs text-muted-foreground">
+                      <span>Hósp.</span><span>Custo</span><span>Cobrado</span>
+                    </div>
+                    {["1","2","3","4+"].map((k) => {
+                      const f = editing?.faixas_hospedes?.[k] ?? {};
+                      return (
+                        <div key={k} className="grid grid-cols-[60px_1fr_1fr] gap-2 items-center">
+                          <span className="text-sm font-medium">{k}</span>
+                          <Input type="number" step="0.01" value={f.custo ?? ""} onChange={(e) => setEditing({ ...editing, faixas_hospedes: { ...(editing?.faixas_hospedes ?? {}), [k]: { ...f, custo: e.target.value } } })} />
+                          <Input type="number" step="0.01" value={f.valor_cobrado ?? ""} onChange={(e) => setEditing({ ...editing, faixas_hospedes: { ...(editing?.faixas_hospedes ?? {}), [k]: { ...f, valor_cobrado: e.target.value } } })} />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
                 <div className="flex items-center gap-2"><Switch checked={editing?.ativo ?? true} onCheckedChange={(v) => setEditing({ ...editing, ativo: v })} /><Label>Ativo</Label></div>
               </div>
               <DialogFooter><Button onClick={save}>Salvar</Button></DialogFooter>
@@ -72,13 +131,15 @@ export default function Parametros() {
           <CardContent className="p-0">
             <Table>
               <TableHeader><TableRow>
-                <TableHead>Nome</TableHead><TableHead>Categoria</TableHead><TableHead>Custo</TableHead><TableHead>Cobrado</TableHead><TableHead>Margem</TableHead><TableHead>Ativo</TableHead><TableHead className="w-[110px]"></TableHead>
+                <TableHead>Nome</TableHead><TableHead>Imóvel</TableHead><TableHead>Área</TableHead><TableHead>Categoria</TableHead><TableHead>Custo</TableHead><TableHead>Cobrado</TableHead><TableHead>Margem</TableHead><TableHead>Ativo</TableHead><TableHead className="w-[110px]"></TableHead>
               </TableRow></TableHeader>
               <TableBody>
-                {list.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Nenhum parâmetro cadastrado.</TableCell></TableRow>}
+                {list.length === 0 && <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">Nenhum parâmetro cadastrado.</TableCell></TableRow>}
                 {list.map((p) => (
                   <TableRow key={p.id}>
                     <TableCell className="font-medium">{p.nome}</TableCell>
+                    <TableCell className="text-muted-foreground">{p.imoveis?.codigo ?? "Geral"}</TableCell>
+                    <TableCell>{p.area ? AREA_LABELS[p.area] ?? p.area : "—"}</TableCell>
                     <TableCell className="text-muted-foreground">{p.categoria ?? "—"}</TableCell>
                     <TableCell className="num">{brl(p.custo)}</TableCell>
                     <TableCell className="num">{brl(p.valor_cobrado)}</TableCell>

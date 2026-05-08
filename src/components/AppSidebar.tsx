@@ -1,7 +1,11 @@
 import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, Building2, Settings2, CalendarRange,
+<<<<<<< HEAD
   Wrench, Wallet, FileBarChart, Upload, Receipt, LogOut, UserCog, PieChart
+=======
+  Wrench, Wallet, FileBarChart, Upload, Receipt, LogOut, ShieldCheck
+>>>>>>> a8603e0acada012d89c36f727530f70e7dcee1d9
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
@@ -11,6 +15,7 @@ import { useAuth, type AppRole } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import sa7dLogo from "@/assets/sa7d-logo.png";
 
+<<<<<<< HEAD
 type NavItem = {
   title: string;
   url: string;
@@ -29,38 +34,71 @@ const groups: NavGroup[] = [
     items: [
       { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, roles: ALL_STAFF },
       { title: "Meu DRE", url: "/meu-dre", icon: PieChart, roles: INVESTIDOR_ONLY },
+=======
+type Item = { title: string; url: string; icon: any; adminOnly?: boolean };
+type Group = { label: string; items: Item[] };
+
+const groups: Group[] = [
+  {
+    label: "Visão geral",
+    items: [
+      { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, adminOnly: true },
+>>>>>>> a8603e0acada012d89c36f727530f70e7dcee1d9
     ],
   },
   {
     label: "Cadastros",
     items: [
+<<<<<<< HEAD
       { title: "Investidores", url: "/investidores", icon: Users, roles: ALL_STAFF },
       { title: "Imóveis", url: "/imoveis", icon: Building2, roles: ALL_STAFF },
       { title: "Parâmetros", url: "/parametros", icon: Settings2, roles: ADMIN_ONLY },
+=======
+      { title: "Investidores", url: "/investidores", icon: Users, adminOnly: true },
+      { title: "Imóveis", url: "/imoveis", icon: Building2 },
+      { title: "Parâmetros", url: "/parametros", icon: Settings2, adminOnly: true },
+>>>>>>> a8603e0acada012d89c36f727530f70e7dcee1d9
     ],
   },
   {
     label: "Operacional",
     items: [
+<<<<<<< HEAD
       { title: "Hospedagens", url: "/hospedagens", icon: CalendarRange, roles: ALL_STAFF },
       { title: "Serviços", url: "/servicos", icon: Receipt, roles: ALL_STAFF },
       { title: "Manutenções", url: "/manutencoes", icon: Wrench, roles: ALL_STAFF },
       { title: "Adiantamentos", url: "/adiantamentos", icon: Wallet, roles: ALL_STAFF },
       { title: "Custos da empresa", url: "/custos", icon: Receipt, roles: ADMIN_ONLY },
       { title: "Importar Airbnb", url: "/importar", icon: Upload, roles: ALL_STAFF },
+=======
+      { title: "Hospedagens", url: "/hospedagens", icon: CalendarRange },
+      { title: "Serviços & Manutenções", url: "/servicos", icon: Wrench },
+      { title: "Adiantamentos", url: "/adiantamentos", icon: Wallet, adminOnly: true },
+      { title: "Custos da empresa", url: "/custos", icon: Receipt, adminOnly: true },
+      { title: "Importar Airbnb", url: "/importar", icon: Upload },
+>>>>>>> a8603e0acada012d89c36f727530f70e7dcee1d9
     ],
   },
   {
     label: "Relatórios",
     items: [
+<<<<<<< HEAD
       { title: "DRE Investidor", url: "/dre/investidor", icon: FileBarChart, roles: ALL_STAFF },
       { title: "DRE Empresa", url: "/dre/empresa", icon: FileBarChart, roles: ADMIN_ONLY },
+=======
+      { title: "DRE Investidor", url: "/dre/investidor", icon: FileBarChart, adminOnly: true },
+      { title: "DRE Empresa", url: "/dre/empresa", icon: FileBarChart, adminOnly: true },
+>>>>>>> a8603e0acada012d89c36f727530f70e7dcee1d9
     ],
   },
   {
     label: "Administração",
     items: [
+<<<<<<< HEAD
       { title: "Equipe", url: "/equipe", icon: UserCog, roles: ADMIN_ONLY },
+=======
+      { title: "Usuários", url: "/usuarios", icon: ShieldCheck, adminOnly: true },
+>>>>>>> a8603e0acada012d89c36f727530f70e7dcee1d9
     ],
   },
 ];
@@ -69,12 +107,20 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const { pathname } = useLocation();
+<<<<<<< HEAD
   const { user, signOut, hasAnyRole, roles } = useAuth();
+=======
+  const { user, signOut, isAdmin } = useAuth();
+>>>>>>> a8603e0acada012d89c36f727530f70e7dcee1d9
 
   const isActive = (url: string) => url === "/" ? pathname === "/" : pathname.startsWith(url);
 
   const visibleGroups = groups
+<<<<<<< HEAD
     .map((g) => ({ ...g, items: g.items.filter((it) => hasAnyRole(it.roles)) }))
+=======
+    .map((g) => ({ ...g, items: g.items.filter((i) => isAdmin || !i.adminOnly) }))
+>>>>>>> a8603e0acada012d89c36f727530f70e7dcee1d9
     .filter((g) => g.items.length > 0);
 
   return (
@@ -87,7 +133,7 @@ export function AppSidebar() {
           {!collapsed && (
             <div className="leading-tight">
               <div className="text-sm font-semibold tracking-wide text-sidebar-foreground">SA7D</div>
-              <div className="text-xs text-sidebar-foreground/60">Gestão financeira</div>
+              <div className="text-xs text-sidebar-foreground/60">{isAdmin ? "Administrador" : "Colaborador"}</div>
             </div>
           )}
         </div>

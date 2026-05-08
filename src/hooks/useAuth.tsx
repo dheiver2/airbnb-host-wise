@@ -4,6 +4,8 @@ import type { Session, User } from "@supabase/supabase-js";
 
 type Role = "admin" | "operacional" | "investidor";
 
+export type AppRole = Role;
+
 interface AuthCtx {
   session: Session | null;
   user: User | null;
@@ -12,6 +14,9 @@ interface AuthCtx {
   signOut: () => Promise<void>;
   isStaff: boolean;
   isAdmin: boolean;
+  isOperacional: boolean;
+  isInvestidor: boolean;
+  hasAnyRole: (allowed: Role[]) => boolean;
 }
 
 const Ctx = createContext<AuthCtx | undefined>(undefined);
@@ -57,6 +62,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session, user, roles, loading, signOut,
       isStaff: roles.includes("admin") || roles.includes("operacional"),
       isAdmin: roles.includes("admin"),
+      isOperacional: roles.includes("operacional"),
+      isInvestidor: roles.includes("investidor"),
+      hasAnyRole: (allowed) => allowed.some((r) => roles.includes(r)),
     }}>
       {children}
     </Ctx.Provider>

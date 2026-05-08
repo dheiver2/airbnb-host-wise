@@ -1,11 +1,12 @@
-import { Outlet, Navigate } from "react-router-dom";
+import { Outlet, Navigate, useLocation } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2 } from "lucide-react";
 
 export default function AppLayout() {
-  const { user, loading } = useAuth();
+  const { user, loading, isInvestidor, isStaff, roles } = useAuth();
+  const { pathname } = useLocation();
 
   if (loading) {
     return (
@@ -15,6 +16,25 @@ export default function AppLayout() {
     );
   }
   if (!user) return <Navigate to="/auth" replace />;
+
+  // Sem papel atribuído ainda → vai para uma rota neutra (auth volta a renderizar mensagem)
+  if (roles.length === 0) {
+    return (
+      <div className="grid min-h-screen place-items-center bg-background p-6 text-center">
+        <div className="max-w-md space-y-3">
+          <div className="text-lg font-semibold">Sua conta ainda não tem papel atribuído.</div>
+          <p className="text-sm text-muted-foreground">
+            Solicite ao administrador da operação que defina seu papel (admin, operacional ou investidor) na página <strong>Equipe</strong>.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Investidor entrando em rota de staff → manda para /meu-dre
+  if (isInvestidor && !isStaff && !pathname.startsWith("/meu-dre")) {
+    return <Navigate to="/meu-dre" replace />;
+  }
 
   return (
     <SidebarProvider>

@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
 import AppLayout from "@/components/AppLayout";
+import RequireRole from "@/components/RequireRole";
 import Auth from "./pages/Auth";
 import Landing from "./pages/Landing";
 import Dashboard from "./pages/Dashboard";
@@ -19,9 +20,15 @@ import Custos from "./pages/Custos";
 import Importar from "./pages/Importar";
 import DREInvestidor from "./pages/DREInvestidor";
 import DREEmpresa from "./pages/DREEmpresa";
+import Equipe from "./pages/Equipe";
+import MeuDre from "./pages/MeuDre";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
+
+const STAFF = ["admin", "operacional"] as const;
+const ADMIN = ["admin"] as const;
+const INVESTIDOR = ["investidor"] as const;
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -34,18 +41,25 @@ const App = () => (
             <Route path="/" element={<Landing />} />
             <Route path="/auth" element={<Auth />} />
             <Route element={<AppLayout />}>
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/investidores" element={<Investidores />} />
-              <Route path="/imoveis" element={<Imoveis />} />
-              <Route path="/parametros" element={<Parametros />} />
-              <Route path="/hospedagens" element={<Hospedagens />} />
-              <Route path="/servicos" element={<Servicos />} />
-              <Route path="/manutencoes" element={<Manutencoes />} />
-              <Route path="/adiantamentos" element={<Adiantamentos />} />
-              <Route path="/custos" element={<Custos />} />
-              <Route path="/importar" element={<Importar />} />
-              <Route path="/dre/investidor" element={<DREInvestidor />} />
-              <Route path="/dre/empresa" element={<DREEmpresa />} />
+              {/* Staff (admin + operacional) */}
+              <Route path="/dashboard" element={<RequireRole roles={[...STAFF]}><Dashboard /></RequireRole>} />
+              <Route path="/investidores" element={<RequireRole roles={[...STAFF]}><Investidores /></RequireRole>} />
+              <Route path="/imoveis" element={<RequireRole roles={[...STAFF]}><Imoveis /></RequireRole>} />
+              <Route path="/hospedagens" element={<RequireRole roles={[...STAFF]}><Hospedagens /></RequireRole>} />
+              <Route path="/servicos" element={<RequireRole roles={[...STAFF]}><Servicos /></RequireRole>} />
+              <Route path="/manutencoes" element={<RequireRole roles={[...STAFF]}><Manutencoes /></RequireRole>} />
+              <Route path="/adiantamentos" element={<RequireRole roles={[...STAFF]}><Adiantamentos /></RequireRole>} />
+              <Route path="/importar" element={<RequireRole roles={[...STAFF]}><Importar /></RequireRole>} />
+              <Route path="/dre/investidor" element={<RequireRole roles={[...STAFF]}><DREInvestidor /></RequireRole>} />
+
+              {/* Admin only */}
+              <Route path="/parametros" element={<RequireRole roles={[...ADMIN]}><Parametros /></RequireRole>} />
+              <Route path="/custos" element={<RequireRole roles={[...ADMIN]}><Custos /></RequireRole>} />
+              <Route path="/dre/empresa" element={<RequireRole roles={[...ADMIN]}><DREEmpresa /></RequireRole>} />
+              <Route path="/equipe" element={<RequireRole roles={[...ADMIN]}><Equipe /></RequireRole>} />
+
+              {/* Investidor only */}
+              <Route path="/meu-dre" element={<RequireRole roles={[...INVESTIDOR]}><MeuDre /></RequireRole>} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -27,14 +27,14 @@ const groups: NavGroup[] = [
   {
     label: "Visão geral",
     items: [
-      { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, roles: ALL_STAFF },
+      { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, roles: ADMIN_ONLY },
       { title: "Meu DRE", url: "/meu-dre", icon: PieChart, roles: INVESTIDOR_ONLY },
     ],
   },
   {
     label: "Cadastros",
     items: [
-      { title: "Investidores", url: "/investidores", icon: Users, roles: ALL_STAFF },
+      { title: "Investidores", url: "/investidores", icon: Users, roles: ADMIN_ONLY },
       { title: "Imóveis", url: "/imoveis", icon: Building2, roles: ALL_STAFF },
       { title: "Parâmetros", url: "/parametros", icon: Settings2, roles: ADMIN_ONLY },
     ],
@@ -53,7 +53,7 @@ const groups: NavGroup[] = [
   {
     label: "Relatórios",
     items: [
-      { title: "DRE Investidor", url: "/dre/investidor", icon: FileBarChart, roles: ALL_STAFF },
+      { title: "DRE Investidor", url: "/dre/investidor", icon: FileBarChart, roles: ADMIN_ONLY },
       { title: "DRE Empresa", url: "/dre/empresa", icon: FileBarChart, roles: ADMIN_ONLY },
     ],
   },
@@ -69,7 +69,7 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const { pathname } = useLocation();
-  const { user, signOut, hasAnyRole, roles, isAdmin } = useAuth();
+  const { user, signOut, hasAnyRole, roles, isAdmin, isInvestidor } = useAuth();
 
   const isActive = (url: string) => url === "/" ? pathname === "/" : pathname.startsWith(url);
 
@@ -87,7 +87,7 @@ export function AppSidebar() {
           {!collapsed && (
             <div className="leading-tight">
               <div className="text-sm font-semibold tracking-wide text-sidebar-foreground">SA7D</div>
-              <div className="text-xs text-sidebar-foreground/60">{isAdmin ? "Administrador" : "Colaborador"}</div>
+              <div className="text-xs text-sidebar-foreground/60">{isAdmin ? "Administrador" : isInvestidor ? "Investidor" : "Colaborador"}</div>
             </div>
           )}
         </div>

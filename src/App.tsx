@@ -41,20 +41,20 @@ const App = () => (
             <Route path="/" element={<Landing />} />
             <Route path="/auth" element={<Auth />} />
             <Route element={<AppLayout />}>
-              {/* Staff (admin + operacional) */}
-              <Route path="/dashboard" element={<RequireRole roles={[...STAFF]}><Dashboard /></RequireRole>} />
-              <Route path="/investidores" element={<RequireRole roles={[...STAFF]}><Investidores /></RequireRole>} />
+              {/* Staff operacional (admin + operacional): operação dia a dia */}
               <Route path="/imoveis" element={<RequireRole roles={[...STAFF]}><Imoveis /></RequireRole>} />
               <Route path="/hospedagens" element={<RequireRole roles={[...STAFF]}><Hospedagens /></RequireRole>} />
               <Route path="/servicos" element={<RequireRole roles={[...STAFF]}><Servicos /></RequireRole>} />
               <Route path="/manutencoes" element={<RequireRole roles={[...STAFF]}><Manutencoes /></RequireRole>} />
               <Route path="/adiantamentos" element={<RequireRole roles={[...STAFF]}><Adiantamentos /></RequireRole>} />
               <Route path="/importar" element={<RequireRole roles={[...STAFF]}><Importar /></RequireRole>} />
-              <Route path="/dre/investidor" element={<RequireRole roles={[...STAFF]}><DREInvestidor /></RequireRole>} />
 
-              {/* Admin only */}
+              {/* Admin only: cadastros financeiros, relatórios e equipe */}
+              <Route path="/dashboard" element={<RequireRole roles={[...ADMIN]}><Dashboard /></RequireRole>} />
+              <Route path="/investidores" element={<RequireRole roles={[...ADMIN]}><Investidores /></RequireRole>} />
               <Route path="/parametros" element={<RequireRole roles={[...ADMIN]}><Parametros /></RequireRole>} />
               <Route path="/custos" element={<RequireRole roles={[...ADMIN]}><Custos /></RequireRole>} />
+              <Route path="/dre/investidor" element={<RequireRole roles={[...ADMIN]}><DREInvestidor /></RequireRole>} />
               <Route path="/dre/empresa" element={<RequireRole roles={[...ADMIN]}><DREEmpresa /></RequireRole>} />
               <Route path="/equipe" element={<RequireRole roles={[...ADMIN]}><Equipe /></RequireRole>} />
               {/* Alias retro-compatível com a página /usuarios criada pelo Lovable */}

@@ -32,18 +32,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(s);
       setUser(s?.user ?? null);
       if (s?.user) {
-        setTimeout(() => loadRoles(s.user.id), 0);
+        // setTimeout: evita rodar query supabase de dentro do callback (recomendação supabase-js)
+        setTimeout(() => { loadRoles(s.user.id); }, 0);
       } else {
         setRoles([]);
       }
     });
 
-    supabase.auth.getSession().then(({ data: { session: s } }) => {
+    (async () => {
+      const { data: { session: s } } = await supabase.auth.getSession();
       setSession(s);
       setUser(s?.user ?? null);
-      if (s?.user) loadRoles(s.user.id);
+      if (s?.user) await loadRoles(s.user.id);
       setLoading(false);
-    });
+    })();
 
     return () => subscription.unsubscribe();
   }, []);

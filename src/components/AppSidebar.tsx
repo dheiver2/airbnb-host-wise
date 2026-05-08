@@ -1,7 +1,7 @@
 import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, Building2, Settings2, CalendarRange,
-  Wrench, Wallet, FileBarChart, Upload, Receipt, LogOut
+  Wrench, Wallet, FileBarChart, Upload, Receipt, LogOut, ShieldCheck
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
@@ -11,19 +11,22 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import sa7dLogo from "@/assets/sa7d-logo.png";
 
-const groups = [
+type Item = { title: string; url: string; icon: any; adminOnly?: boolean };
+type Group = { label: string; items: Item[] };
+
+const groups: Group[] = [
   {
     label: "Visão geral",
     items: [
-      { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+      { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, adminOnly: true },
     ],
   },
   {
     label: "Cadastros",
     items: [
-      { title: "Investidores", url: "/investidores", icon: Users },
+      { title: "Investidores", url: "/investidores", icon: Users, adminOnly: true },
       { title: "Imóveis", url: "/imoveis", icon: Building2 },
-      { title: "Parâmetros", url: "/parametros", icon: Settings2 },
+      { title: "Parâmetros", url: "/parametros", icon: Settings2, adminOnly: true },
     ],
   },
   {
@@ -31,16 +34,22 @@ const groups = [
     items: [
       { title: "Hospedagens", url: "/hospedagens", icon: CalendarRange },
       { title: "Serviços & Manutenções", url: "/servicos", icon: Wrench },
-      { title: "Adiantamentos", url: "/adiantamentos", icon: Wallet },
-      { title: "Custos da empresa", url: "/custos", icon: Receipt },
+      { title: "Adiantamentos", url: "/adiantamentos", icon: Wallet, adminOnly: true },
+      { title: "Custos da empresa", url: "/custos", icon: Receipt, adminOnly: true },
       { title: "Importar Airbnb", url: "/importar", icon: Upload },
     ],
   },
   {
     label: "Relatórios",
     items: [
-      { title: "DRE Investidor", url: "/dre/investidor", icon: FileBarChart },
-      { title: "DRE Empresa", url: "/dre/empresa", icon: FileBarChart },
+      { title: "DRE Investidor", url: "/dre/investidor", icon: FileBarChart, adminOnly: true },
+      { title: "DRE Empresa", url: "/dre/empresa", icon: FileBarChart, adminOnly: true },
+    ],
+  },
+  {
+    label: "Administração",
+    items: [
+      { title: "Usuários", url: "/usuarios", icon: ShieldCheck, adminOnly: true },
     ],
   },
 ];
@@ -49,9 +58,13 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const { pathname } = useLocation();
-  const { user, signOut } = useAuth();
+  const { user, signOut, isAdmin } = useAuth();
 
   const isActive = (url: string) => url === "/" ? pathname === "/" : pathname.startsWith(url);
+
+  const visibleGroups = groups
+    .map((g) => ({ ...g, items: g.items.filter((i) => isAdmin || !i.adminOnly) }))
+    .filter((g) => g.items.length > 0);
 
   return (
     <Sidebar collapsible="icon">
@@ -63,14 +76,14 @@ export function AppSidebar() {
           {!collapsed && (
             <div className="leading-tight">
               <div className="text-sm font-semibold tracking-wide text-sidebar-foreground">SA7D</div>
-              <div className="text-xs text-sidebar-foreground/60">Gestão financeira</div>
+              <div className="text-xs text-sidebar-foreground/60">{isAdmin ? "Administrador" : "Colaborador"}</div>
             </div>
           )}
         </div>
       </SidebarHeader>
 
       <SidebarContent>
-        {groups.map((g) => (
+        {visibleGroups.map((g) => (
           <SidebarGroup key={g.label}>
             {!collapsed && <SidebarGroupLabel>{g.label}</SidebarGroupLabel>}
             <SidebarGroupContent>

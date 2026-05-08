@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -14,6 +14,7 @@ import Imoveis from "./pages/Imoveis";
 import Parametros from "./pages/Parametros";
 import Hospedagens from "./pages/Hospedagens";
 import Servicos from "./pages/Servicos";
+import Manutencoes from "./pages/Manutencoes";
 import Adiantamentos from "./pages/Adiantamentos";
 import Custos from "./pages/Custos";
 import Importar from "./pages/Importar";
@@ -22,8 +23,6 @@ import DREEmpresa from "./pages/DREEmpresa";
 import Equipe from "./pages/Equipe";
 import MeuDre from "./pages/MeuDre";
 import NotFound from "./pages/NotFound.tsx";
-import Usuarios from "./pages/Usuarios";
-import { RoleGuard } from "@/components/RoleGuard";
 
 const queryClient = new QueryClient();
 
@@ -42,7 +41,6 @@ const App = () => (
             <Route path="/" element={<Landing />} />
             <Route path="/auth" element={<Auth />} />
             <Route element={<AppLayout />}>
-<<<<<<< HEAD
               {/* Staff (admin + operacional) */}
               <Route path="/dashboard" element={<RequireRole roles={[...STAFF]}><Dashboard /></RequireRole>} />
               <Route path="/investidores" element={<RequireRole roles={[...STAFF]}><Investidores /></RequireRole>} />
@@ -59,23 +57,11 @@ const App = () => (
               <Route path="/custos" element={<RequireRole roles={[...ADMIN]}><Custos /></RequireRole>} />
               <Route path="/dre/empresa" element={<RequireRole roles={[...ADMIN]}><DREEmpresa /></RequireRole>} />
               <Route path="/equipe" element={<RequireRole roles={[...ADMIN]}><Equipe /></RequireRole>} />
+              {/* Alias retro-compatível com a página /usuarios criada pelo Lovable */}
+              <Route path="/usuarios" element={<Navigate to="/equipe" replace />} />
 
               {/* Investidor only */}
               <Route path="/meu-dre" element={<RequireRole roles={[...INVESTIDOR]}><MeuDre /></RequireRole>} />
-=======
-              <Route path="/dashboard" element={<RoleGuard adminOnly><Dashboard /></RoleGuard>} />
-              <Route path="/investidores" element={<RoleGuard adminOnly><Investidores /></RoleGuard>} />
-              <Route path="/imoveis" element={<RoleGuard><Imoveis /></RoleGuard>} />
-              <Route path="/parametros" element={<RoleGuard adminOnly><Parametros /></RoleGuard>} />
-              <Route path="/hospedagens" element={<RoleGuard><Hospedagens /></RoleGuard>} />
-              <Route path="/servicos" element={<RoleGuard><Servicos /></RoleGuard>} />
-              <Route path="/adiantamentos" element={<RoleGuard adminOnly><Adiantamentos /></RoleGuard>} />
-              <Route path="/custos" element={<RoleGuard adminOnly><Custos /></RoleGuard>} />
-              <Route path="/importar" element={<RoleGuard><Importar /></RoleGuard>} />
-              <Route path="/dre/investidor" element={<RoleGuard adminOnly><DREInvestidor /></RoleGuard>} />
-              <Route path="/dre/empresa" element={<RoleGuard adminOnly><DREEmpresa /></RoleGuard>} />
-              <Route path="/usuarios" element={<RoleGuard adminOnly><Usuarios /></RoleGuard>} />
->>>>>>> a8603e0acada012d89c36f727530f70e7dcee1d9
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -4,6 +4,8 @@ import { useAuth, type AppRole } from "@/hooks/useAuth";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -17,7 +19,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Loader2, RefreshCw, ShieldCheck, UserMinus, UserPlus } from "lucide-react";
+import { Loader2, MailPlus, RefreshCw, ShieldCheck, UserMinus, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
 type ProfileRow = {
@@ -51,6 +53,61 @@ export default function Equipe() {
   // dialog "Adicionar papel"
   const [addOpen, setAddOpen] = useState<string | null>(null);
   const [addRole, setAddRole] = useState<AppRole>("operacional");
+
+  // dialog "Convidar usuário"
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteBusy, setInviteBusy] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteNome, setInviteNome] = useState("");
+  const [inviteRole, setInviteRole] = useState<AppRole>("operacional");
+  const [invDocumento, setInvDocumento] = useState("");
+  const [invTelefone, setInvTelefone] = useState("");
+  const [invPix, setInvPix] = useState("");
+
+  const resetInvite = () => {
+    setInviteEmail("");
+    setInviteNome("");
+    setInviteRole("operacional");
+    setInvDocumento("");
+    setInvTelefone("");
+    setInvPix("");
+  };
+
+  const submitInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setInviteBusy(true);
+    const payload = {
+      email: inviteEmail.trim().toLowerCase(),
+      nome: inviteNome.trim() || undefined,
+      role: inviteRole,
+      investidor:
+        inviteRole === "investidor"
+          ? {
+              documento: invDocumento.trim() || undefined,
+              telefone: invTelefone.trim() || undefined,
+              pix: invPix.trim() || undefined,
+            }
+          : undefined,
+    };
+    const { data, error } = await supabase.functions.invoke("invite-user", {
+      body: payload,
+    });
+    setInviteBusy(false);
+    if (error) {
+      toast.error(`Falha ao convidar: ${error.message ?? error}`);
+      return;
+    }
+    if (data?.warning) {
+      toast.warning(`Convite criado, mas: ${data.warning}`);
+    } else {
+      toast.success(
+        `Convite enviado para ${payload.email}. O usuário receberá um email para definir a senha.`,
+      );
+    }
+    setInviteOpen(false);
+    resetInvite();
+    load();
+  };
 
   const load = async () => {
     setLoading(true);
@@ -127,12 +184,122 @@ export default function Equipe() {
     <div className="flex flex-col">
       <PageHeader
         title="Equipe"
-        description="Gerencie os papéis dos usuários cadastrados. O cadastro inicial é feito pela tela de Criar conta."
+        description="Convide colaboradores e investidores; gerencie os papéis. O usuário convidado recebe um email para definir a senha."
         actions={
-          <Button variant="outline" size="sm" onClick={load} disabled={loading}>
-            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-            Atualizar
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Dialog
+              open={inviteOpen}
+              onOpenChange={(o) => {
+                setInviteOpen(o);
+                if (!o) resetInvite();
+              }}
+            >
+              <DialogTrigger asChild>
+                <Button size="sm" className="bg-gradient-brand text-primary-foreground shadow-brand hover:opacity-95">
+                  <MailPlus className="mr-2 h-4 w-4" />
+                  Convidar usuário
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                  <DialogTitle>Convidar novo usuário</DialogTitle>
+                  <DialogDescription>
+                    Crie a conta diretamente. O usuário receberá um email para definir a senha.
+                  </DialogDescription>
+                </DialogHeader>
+
+                <form onSubmit={submitInvite} className="space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <Label htmlFor="inv-email">Email *</Label>
+                      <Input
+                        id="inv-email"
+                        type="email"
+                        required
+                        value={inviteEmail}
+                        onChange={(e) => setInviteEmail(e.target.value)}
+                        placeholder="pessoa@exemplo.com"
+                      />
+                    </div>
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <Label htmlFor="inv-nome">Nome</Label>
+                      <Input
+                        id="inv-nome"
+                        value={inviteNome}
+                        onChange={(e) => setInviteNome(e.target.value)}
+                        placeholder="Nome completo"
+                      />
+                    </div>
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <Label>Papel *</Label>
+                      <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as AppRole)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="operacional">Operacional (colaborador)</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="investidor">Investidor</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {inviteRole === "investidor" && (
+                      <>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="inv-doc">Documento</Label>
+                          <Input
+                            id="inv-doc"
+                            value={invDocumento}
+                            onChange={(e) => setInvDocumento(e.target.value)}
+                            placeholder="CPF/CNPJ"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="inv-tel">Telefone</Label>
+                          <Input
+                            id="inv-tel"
+                            value={invTelefone}
+                            onChange={(e) => setInvTelefone(e.target.value)}
+                            placeholder="(11) 99999-0000"
+                          />
+                        </div>
+                        <div className="space-y-1.5 sm:col-span-2">
+                          <Label htmlFor="inv-pix">PIX</Label>
+                          <Input
+                            id="inv-pix"
+                            value={invPix}
+                            onChange={(e) => setInvPix(e.target.value)}
+                            placeholder="Chave PIX para repasses"
+                          />
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  <DialogFooter>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setInviteOpen(false)}
+                      disabled={inviteBusy}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button type="submit" disabled={inviteBusy}>
+                      {inviteBusy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Enviar convite
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+
+            <Button variant="outline" size="sm" onClick={load} disabled={loading}>
+              <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+              Atualizar
+            </Button>
+          </div>
         }
       />
 
@@ -264,9 +431,10 @@ export default function Equipe() {
         </div>
 
         <div className="mt-6 rounded-xl border border-border bg-card/40 p-4 text-sm text-muted-foreground">
-          <strong className="text-foreground">Como adicionar um novo colaborador:</strong> peça que ele acesse a tela de
-          login e crie a conta dele em <em>"Criar conta"</em>. Ele aparece aqui logo depois e você define o papel correto.
-          Convite por email exige uma <em>Edge Function</em> com a service-role key do Supabase — pode ser adicionado depois.
+          <strong className="text-foreground">Como cadastrar:</strong> use o botão <em>"Convidar usuário"</em> no topo
+          desta página. O usuário recebe um email do Supabase com um link para definir a senha e já entra com o papel
+          que você escolheu. Para investidores, os dados (documento, telefone, PIX) ficam disponíveis para edição em
+          <em> Investidores</em> depois do convite aceito.
         </div>
       </div>
     </div>

@@ -19,6 +19,8 @@ import Importar from "./pages/Importar";
 import DREInvestidor from "./pages/DREInvestidor";
 import DREEmpresa from "./pages/DREEmpresa";
 import NotFound from "./pages/NotFound.tsx";
+import Usuarios from "./pages/Usuarios";
+import { RoleGuard } from "@/components/RoleGuard";
 
 const queryClient = new QueryClient();
 
@@ -33,17 +35,18 @@ const App = () => (
             <Route path="/" element={<Landing />} />
             <Route path="/auth" element={<Auth />} />
             <Route element={<AppLayout />}>
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/investidores" element={<Investidores />} />
-              <Route path="/imoveis" element={<Imoveis />} />
-              <Route path="/parametros" element={<Parametros />} />
-              <Route path="/hospedagens" element={<Hospedagens />} />
-              <Route path="/servicos" element={<Servicos />} />
-              <Route path="/adiantamentos" element={<Adiantamentos />} />
-              <Route path="/custos" element={<Custos />} />
-              <Route path="/importar" element={<Importar />} />
-              <Route path="/dre/investidor" element={<DREInvestidor />} />
-              <Route path="/dre/empresa" element={<DREEmpresa />} />
+              <Route path="/dashboard" element={<RoleGuard adminOnly><Dashboard /></RoleGuard>} />
+              <Route path="/investidores" element={<RoleGuard adminOnly><Investidores /></RoleGuard>} />
+              <Route path="/imoveis" element={<RoleGuard><Imoveis /></RoleGuard>} />
+              <Route path="/parametros" element={<RoleGuard adminOnly><Parametros /></RoleGuard>} />
+              <Route path="/hospedagens" element={<RoleGuard><Hospedagens /></RoleGuard>} />
+              <Route path="/servicos" element={<RoleGuard><Servicos /></RoleGuard>} />
+              <Route path="/adiantamentos" element={<RoleGuard adminOnly><Adiantamentos /></RoleGuard>} />
+              <Route path="/custos" element={<RoleGuard adminOnly><Custos /></RoleGuard>} />
+              <Route path="/importar" element={<RoleGuard><Importar /></RoleGuard>} />
+              <Route path="/dre/investidor" element={<RoleGuard adminOnly><DREInvestidor /></RoleGuard>} />
+              <Route path="/dre/empresa" element={<RoleGuard adminOnly><DREEmpresa /></RoleGuard>} />
+              <Route path="/usuarios" element={<RoleGuard adminOnly><Usuarios /></RoleGuard>} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

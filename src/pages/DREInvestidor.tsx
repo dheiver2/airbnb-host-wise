@@ -23,6 +23,7 @@ export default function DREInvestidor() {
   const [servicos, setServicos] = useState<any[]>([]);
   const [manuts, setManuts] = useState<any[]>([]);
   const [adiants, setAdiants] = useState<any[]>([]);
+  const [payoutsInv, setPayoutsInv] = useState<any[]>([]);
 
   useEffect(() => { supabase.from("investidores").select("id, nome").order("nome").then(({ data }) => { setInvestidores(data ?? []); if (data?.[0] && !investidorId) setInvestidorId(data[0].id); }); }, []);
   useEffect(() => { if (investidorId) load(); }, [investidorId, mes]);
@@ -32,14 +33,16 @@ export default function DREInvestidor() {
     const { data: ims } = await supabase.from("imoveis").select("*").eq("investidor_id", investidorId);
     setImoveis(ims ?? []);
     const ids = (ims ?? []).map((i: any) => i.id);
-    if (ids.length === 0) { setReservas([]); setServicos([]); setManuts([]); setAdiants([]); return; }
-    const [r, s, m, a] = await Promise.all([
+    if (ids.length === 0) { setReservas([]); setServicos([]); setManuts([]); setAdiants([]); setPayoutsInv([]); return; }
+    const [r, s, m, a, py] = await Promise.all([
       supabase.from("reservas").select("*").in("imovel_id", ids).gte("mes_competencia", start).lte("mes_competencia", end),
       supabase.from("servicos_operacionais").select("*").in("imovel_id", ids).gte("mes_competencia", start).lte("mes_competencia", end),
       supabase.from("manutencoes").select("*").in("imovel_id", ids).gte("mes_competencia", start).lte("mes_competencia", end),
       supabase.from("adiantamentos").select("*").eq("investidor_id", investidorId).gte("mes_competencia", start).lte("mes_competencia", end),
+      // Payouts diretos do Airbnb pra este investidor no mesmo período (subtraídos do saldo a repassar)
+      supabase.from("payouts").select("valor_pago, data").eq("investidor_id", investidorId).eq("is_sa7d", false).gte("data", start).lte("data", end),
     ]);
-    setReservas(r.data ?? []); setServicos(s.data ?? []); setManuts(m.data ?? []); setAdiants(a.data ?? []);
+    setReservas(r.data ?? []); setServicos(s.data ?? []); setManuts(m.data ?? []); setAdiants(a.data ?? []); setPayoutsInv(py.data ?? []);
   }
 
   const calc = useMemo(() => {
@@ -64,12 +67,18 @@ export default function DREInvestidor() {
     const manutencao = porImovel.reduce((s, p) => s + p.manutencao, 0);
     const totalDesp = comissao + despFaxina + despLav + despMat + manutencao;
     const liquida = faturamento - totalDesp;
-    const adiantado = adiants.reduce((s, a) => s + Number(a.valor || 0), 0);
+    // Adiantamentos pagos ao investidor no periodo:
+    //   manual = lancamentos da tabela adiantamentos (SA7D repassa via PIX)
+    //   payout = Airbnb pagou direto na conta do investidor (co-host)
+    // Ambos saem do saldo a repassar — sao dinheiros distintos, nao duplicam.
+    const adiantadoManual = adiants.reduce((s, a) => s + Number(a.valor || 0), 0);
+    const adiantadoPayouts = payoutsInv.reduce((s, x) => s + Number(x.valor_pago || 0), 0);
+    const adiantado = adiantadoManual + adiantadoPayouts;
     const saldo = liquida - adiantado;
     const pctCustos = faturamento > 0 ? (totalDesp / faturamento) * 100 : 0;
 
-    return { porImovel, faturamento, comissao, despFaxina, despLav, despMat, manutencao, totalDesp, liquida, adiantado, saldo, pctCustos };
-  }, [imoveis, reservas, servicos, manuts, adiants]);
+    return { porImovel, faturamento, comissao, despFaxina, despLav, despMat, manutencao, totalDesp, liquida, adiantadoManual, adiantadoPayouts, adiantado, saldo, pctCustos };
+  }, [imoveis, reservas, servicos, manuts, adiants, payoutsInv]);
 
   const investidor = investidores.find((i) => i.id === investidorId);
 
@@ -81,7 +90,8 @@ export default function DREInvestidor() {
     { label: "(−) Material de limpeza", valor: -calc.despMat, tipo: "despesa" },
     { label: "(−) Manutenções", valor: -calc.manutencao, tipo: "despesa" },
     { label: "= Receita líquida do investidor", valor: calc.liquida, tipo: "subtotal" },
-    { label: "(−) Adiantamentos já pagos", valor: -calc.adiantado, tipo: "despesa" },
+    { label: "(−) Adiantamentos SA7D→você", valor: -calc.adiantadoManual, tipo: "despesa" },
+    { label: "(−) Pagos direto pelo Airbnb (co-host)", valor: -calc.adiantadoPayouts, tipo: "despesa" },
     { label: "= Saldo a repassar", valor: calc.saldo, tipo: "total" },
   ];
 

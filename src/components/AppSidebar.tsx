@@ -36,7 +36,7 @@ const groups: NavGroup[] = [
     items: [
       { title: "Investidores", url: "/investidores", icon: Users, roles: ADMIN_ONLY },
       { title: "Imóveis", url: "/imoveis", icon: Building2, roles: ALL_STAFF },
-      { title: "Parâmetros", url: "/parametros", icon: Settings2, roles: ADMIN_ONLY },
+      { title: "Parâmetros", url: "/parametros", icon: Settings2, roles: ALL_STAFF },
     ],
   },
   {
@@ -46,7 +46,7 @@ const groups: NavGroup[] = [
       { title: "Serviços", url: "/servicos", icon: Receipt, roles: ALL_STAFF },
       { title: "Manutenções", url: "/manutencoes", icon: Wrench, roles: ALL_STAFF },
       { title: "Adiantamentos", url: "/adiantamentos", icon: Wallet, roles: ALL_STAFF },
-      { title: "Custos da empresa", url: "/custos", icon: Receipt, roles: ADMIN_ONLY },
+      { title: "Custos da empresa", url: "/custos", icon: Receipt, roles: ALL_STAFF },
       { title: "Importar Airbnb", url: "/importar", icon: Upload, roles: ALL_STAFF },
     ],
   },

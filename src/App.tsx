@@ -49,11 +49,13 @@ const App = () => (
               <Route path="/adiantamentos" element={<RequireRole roles={[...STAFF]}><Adiantamentos /></RequireRole>} />
               <Route path="/importar" element={<RequireRole roles={[...STAFF]}><Importar /></RequireRole>} />
 
-              {/* Admin only: cadastros financeiros, relatórios e equipe */}
+              {/* Staff: cadastros e operação */}
+              <Route path="/parametros" element={<RequireRole roles={[...STAFF]}><Parametros /></RequireRole>} />
+              <Route path="/custos" element={<RequireRole roles={[...STAFF]}><Custos /></RequireRole>} />
+
+              {/* Admin only: relatórios, cadastros financeiros e equipe */}
               <Route path="/dashboard" element={<RequireRole roles={[...ADMIN]}><Dashboard /></RequireRole>} />
               <Route path="/investidores" element={<RequireRole roles={[...ADMIN]}><Investidores /></RequireRole>} />
-              <Route path="/parametros" element={<RequireRole roles={[...ADMIN]}><Parametros /></RequireRole>} />
-              <Route path="/custos" element={<RequireRole roles={[...ADMIN]}><Custos /></RequireRole>} />
               <Route path="/dre/investidor" element={<RequireRole roles={[...ADMIN]}><DREInvestidor /></RequireRole>} />
               <Route path="/dre/empresa" element={<RequireRole roles={[...ADMIN]}><DREEmpresa /></RequireRole>} />
               <Route path="/equipe" element={<RequireRole roles={[...ADMIN]}><Equipe /></RequireRole>} />

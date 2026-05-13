@@ -36,7 +36,7 @@ const groups: NavGroup[] = [
     items: [
       { title: "Investidores", url: "/investidores", icon: Users, roles: ADMIN_ONLY },
       { title: "Imóveis", url: "/imoveis", icon: Building2, roles: ALL_STAFF },
-      { title: "Parâmetros", url: "/parametros", icon: Settings2, roles: ADMIN_ONLY },
+      { title: "Parâmetros", url: "/parametros", icon: Settings2, roles: ALL_STAFF },
     ],
   },
   {

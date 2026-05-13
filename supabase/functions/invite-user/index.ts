@@ -84,11 +84,14 @@ Deno.serve(async (req: Request) => {
 
   const { data: callerRoles, error: rolesErr } = await adminClient
     .from("user_roles")
-    .select("role")
+    .select("role, conta_id")
     .eq("user_id", callerId);
   if (rolesErr) return json(500, { error: rolesErr.message });
   const isAdmin = (callerRoles ?? []).some((r) => r.role === "admin");
   if (!isAdmin) return json(403, { error: "forbidden" });
+  // Toda role criada pelo invite herda a conta do admin que está convidando.
+  const callerContaId =
+    (callerRoles ?? []).find((r) => r.role === "admin")?.conta_id ?? callerId;
 
   // 2) Valida payload
   let body: Body;
@@ -117,13 +120,13 @@ Deno.serve(async (req: Request) => {
   }
   const newUserId = invited.user.id;
 
-  // 4) Ajusta o papel:
-  // O trigger handle_new_user já atribuiu 'operacional' (ou 'admin' se for o
-  // 1º usuário do sistema). Reseta e seta o papel desejado.
+  // 4) Atribui o papel na conta do admin que está convidando.
+  // O trigger handle_new_user pode ter criado uma linha 'admin' (se este foi
+  // o 1º usuário do sistema). Limpamos e setamos o papel + conta corretos.
   await adminClient.from("user_roles").delete().eq("user_id", newUserId);
   const { error: roleErr } = await adminClient
     .from("user_roles")
-    .insert({ user_id: newUserId, role });
+    .insert({ user_id: newUserId, role, conta_id: callerContaId });
   if (roleErr) {
     // user já criado, mas falha ao setar papel. Não dá pra fazer rollback do
     // user via service key — devolve aviso para o admin corrigir em /equipe.
@@ -137,11 +140,12 @@ Deno.serve(async (req: Request) => {
   // 5) Se for investidor, garante linha em public.investidores ligada
   let investidorId: string | null = null;
   if (role === "investidor") {
-    // Tenta UPDATE primeiro (caso já exista um investidor com este email)
+    // Tenta UPDATE primeiro (caso já exista um investidor com este email NA MESMA CONTA)
     const { data: existing } = await adminClient
       .from("investidores")
       .select("id, user_id")
       .ilike("email", email)
+      .eq("conta_id", callerContaId)
       .maybeSingle();
     if (existing) {
       investidorId = existing.id as string;
@@ -161,6 +165,7 @@ Deno.serve(async (req: Request) => {
           telefone: body.investidor?.telefone ?? null,
           pix: body.investidor?.pix ?? null,
           user_id: newUserId,
+          conta_id: callerContaId,
           status: "ativo",
         })
         .select("id")

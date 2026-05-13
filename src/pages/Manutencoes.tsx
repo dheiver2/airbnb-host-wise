@@ -10,7 +10,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Paperclip, Download, Upload, X } from "lucide-react";
+import { Plus, Trash2, Paperclip, Upload, X } from "lucide-react";
+import { AnexoDownload } from "@/components/AnexoDownload";
 import { toast } from "sonner";
 import { brl, dateBR, monthRange } from "@/lib/format";
 import { useCompetenciaState } from "@/hooks/useLatestCompetencia";
@@ -314,11 +315,7 @@ export default function Manutencoes() {
                 <div key={i} className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
                   <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                   <span className="flex-1 truncate">{a.nome}</span>
-                  <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" asChild>
-                    <a href={a.url} target="_blank" rel="noopener noreferrer" download={a.nome}>
-                      <Download className="h-3.5 w-3.5" />
-                    </a>
-                  </Button>
+                  <AnexoDownload path={a.path} nome={a.nome} />
                   <Button
                     size="icon" variant="ghost"
                     className="h-7 w-7 shrink-0 text-destructive hover:text-destructive"

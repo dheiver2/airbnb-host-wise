@@ -137,7 +137,10 @@ export default function Dashboard() {
       return acc + (im ? Number(x.valor_bruto || 0) * (Number(im.percentual_comissao) / 100) : 0);
     }, 0);
     const recServ = servicos.reduce((a, x: any) => a + Number(x.valor_cobrado || 0), 0);
-    const recManut = manuts.filter((x: any) => x.rateio === "investidor").reduce((a, x: any) => a + Number(x.valor_cobrado || 0), 0);
+    // Alinhado com DRE Empresa (commit f9fbcd8): fallback no custo quando
+    // valor_cobrado=0 com rateio=investidor, fechando o buraco em que o
+    // investidor era cobrado mas a empresa nao registrava a receita.
+    const recManut = manuts.filter((x: any) => x.rateio === "investidor").reduce((a, x: any) => a + Number(x.valor_cobrado || x.custo || 0), 0);
     const receitaEmpresa = comissao + recServ + recManut;
 
     const custoServ = servicos.reduce((a, x: any) => a + Number(x.custo_real || 0), 0);

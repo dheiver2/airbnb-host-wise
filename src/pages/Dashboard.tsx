@@ -119,7 +119,10 @@ export default function Dashboard() {
       supabase.from("manutencoes").select("custo, valor_cobrado, rateio").gte("mes_competencia", start).lte("mes_competencia", end),
       supabase.from("custos_fixos").select("valor").gte("mes_competencia", start).lte("mes_competencia", end),
       supabase.from("payouts").select("valor_pago, is_sa7d").gte("data", baseStart).lte("data", baseEnd),
-      supabase.from("adiantamentos").select("valor").gte("mes_competencia", start).lte("mes_competencia", end),
+      // adiantamentos com is_sa7d=false = dinheiro JA recebido pelo investidor
+      // (Airbnb direto OR SA7D repassou manualmente). Inclui linhas criadas pelo
+      // Importar (1 por reserva) e lancamentos manuais via /adiantamentos.
+      supabase.from("adiantamentos").select("valor").eq("is_sa7d", false).gte("mes_competencia", start).lte("mes_competencia", end),
     ]);
 
     const reservas = r.data ?? [];
@@ -160,15 +163,10 @@ export default function Dashboard() {
     const adr = noites > 0 ? reservasValorBruto / noites : 0;
     const revpar = cap > 0 ? reservasValorBruto / cap : 0;
 
-    // Adiantamentos = TUDO que saiu pro investidor no periodo:
-    //  (a) payouts pagos direto pelo Airbnb na conta do investidor (is_sa7d=false)
-    //  (b) lancamentos manuais em public.adiantamentos (SA7D repassa via PIX etc.)
-    // Sao fluxos distintos (verificado via match data+valor+investidor): nao duplicam.
-    const adiantPayouts = payouts
-      .filter((x: any) => x.is_sa7d === false)
-      .reduce((a: number, x: any) => a + Number(x.valor_pago || 0), 0);
-    const adiantManuais = (ad.data ?? []).reduce((a: number, x: any) => a + Number(x.valor || 0), 0);
-    const adiantamentos = adiantPayouts + adiantManuais;
+    // Adiantamentos = dinheiro ja recebido pelo investidor no periodo (is_sa7d=false).
+    // NAO somar payouts aqui — o Importar.tsx ja cria 1 linha em adiantamentos por
+    // reserva com is_sa7d copiado do payout. Seria dupla contagem.
+    const adiantamentos = (ad.data ?? []).reduce((a: number, x: any) => a + Number(x.valor || 0), 0);
 
     return { faturamento, lucro, ocupacao, adr, revpar, noites, adiantamentos };
   }

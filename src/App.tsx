@@ -59,7 +59,7 @@ const App = () => (
               <Route path="/dre/investidor" element={<RequireRole roles={[...ADMIN]}><DREInvestidor /></RequireRole>} />
               <Route path="/dre/empresa" element={<RequireRole roles={[...ADMIN]}><DREEmpresa /></RequireRole>} />
               <Route path="/equipe" element={<RequireRole roles={[...ADMIN]}><Equipe /></RequireRole>} />
-              {/* Alias retro-compatível com a página /usuarios criada pelo Lovable */}
+              {/* Alias retro-compatível (bookmark antigo /usuarios → /equipe) */}
               <Route path="/usuarios" element={<Navigate to="/equipe" replace />} />
 
               {/* Investidor only */}

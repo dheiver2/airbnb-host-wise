@@ -3,7 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { MonthPicker } from "@/components/MonthPicker";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { brl, monthInputValue, monthRange, monthBR, pct } from "@/lib/format";
 import { useCompetenciaState } from "@/hooks/useLatestCompetencia";
@@ -54,7 +53,10 @@ export default function DREEmpresa() {
     const recFaxina = sumServ("faxina", "valor_cobrado");
     const recLav = sumServ("lavanderia", "valor_cobrado");
     const recMat = sumServ("material", "valor_cobrado");
-    const recManut = manuts.filter((x) => x.rateio === "investidor").reduce((s, x) => s + Number(x.valor_cobrado || 0), 0);
+    // Alinhado com DREInvestidor: se valor_cobrado nao foi precificado, cai
+    // no custo (repasse a custo). Sem o fallback, o investidor era cobrado
+    // mas a empresa nao registrava a receita correspondente.
+    const recManut = manuts.filter((x) => x.rateio === "investidor").reduce((s, x) => s + Number(x.valor_cobrado || x.custo || 0), 0);
 
     const custoFaxina = sumServ("faxina", "custo_real");
     const custoLav = sumServ("lavanderia", "custo_real");

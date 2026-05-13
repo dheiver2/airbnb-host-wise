@@ -113,12 +113,13 @@ export default function Dashboard() {
     const baseStart = toIso(new Date(ini.getFullYear(), ini.getMonth(), 2));
     const baseEnd = toIso(new Date(fim.getFullYear(), fim.getMonth() + 1, 1));
 
-    const [r, s, m, c, py] = await Promise.all([
+    const [r, s, m, c, py, ad] = await Promise.all([
       supabase.from("reservas").select("valor_bruto, check_in, check_out, imovel_id").gte("check_in", baseStart).lte("check_in", baseEnd),
       supabase.from("servicos_operacionais").select("custo_real, valor_cobrado, tipo").gte("mes_competencia", start).lte("mes_competencia", end),
       supabase.from("manutencoes").select("custo, valor_cobrado, rateio").gte("mes_competencia", start).lte("mes_competencia", end),
       supabase.from("custos_fixos").select("valor").gte("mes_competencia", start).lte("mes_competencia", end),
       supabase.from("payouts").select("valor_pago, is_sa7d").gte("data", baseStart).lte("data", baseEnd),
+      supabase.from("adiantamentos").select("valor").gte("mes_competencia", start).lte("mes_competencia", end),
     ]);
 
     const reservas = r.data ?? [];
@@ -159,9 +160,15 @@ export default function Dashboard() {
     const adr = noites > 0 ? reservasValorBruto / noites : 0;
     const revpar = cap > 0 ? reservasValorBruto / cap : 0;
 
-    const adiantamentos = payouts
+    // Adiantamentos = TUDO que saiu pro investidor no periodo:
+    //  (a) payouts pagos direto pelo Airbnb na conta do investidor (is_sa7d=false)
+    //  (b) lancamentos manuais em public.adiantamentos (SA7D repassa via PIX etc.)
+    // Sao fluxos distintos (verificado via match data+valor+investidor): nao duplicam.
+    const adiantPayouts = payouts
       .filter((x: any) => x.is_sa7d === false)
       .reduce((a: number, x: any) => a + Number(x.valor_pago || 0), 0);
+    const adiantManuais = (ad.data ?? []).reduce((a: number, x: any) => a + Number(x.valor || 0), 0);
+    const adiantamentos = adiantPayouts + adiantManuais;
 
     return { faturamento, lucro, ocupacao, adr, revpar, noites, adiantamentos };
   }

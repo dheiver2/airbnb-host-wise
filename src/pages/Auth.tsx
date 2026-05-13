@@ -11,15 +11,27 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import sa7dLogo from "@/assets/sa7d-logo.png";
 
+function rotaPadraoPorRole(isAdmin: boolean, isOperacional: boolean, isInvestidor: boolean): string {
+  if (isAdmin) return "/dashboard";
+  if (isOperacional) return "/operacional";
+  if (isInvestidor) return "/meu-dre";
+  return "/"; // sem papel: AppLayout vai mostrar tela "sem papel"
+}
+
 export default function Auth() {
-  const { user } = useAuth();
+  const { user, isAdmin, isOperacional, isInvestidor, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [nome, setNome] = useState("");
 
-  useEffect(() => { if (user) navigate("/dashboard", { replace: true }); }, [user, navigate]);
+  useEffect(() => {
+    // Espera roles carregarem antes de decidir pra onde mandar
+    if (user && !authLoading) {
+      navigate(rotaPadraoPorRole(isAdmin, isOperacional, isInvestidor), { replace: true });
+    }
+  }, [user, authLoading, isAdmin, isOperacional, isInvestidor, navigate]);
 
   const signIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,7 +39,7 @@ export default function Auth() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) toast.error(error.message);
-    else { toast.success("Bem-vindo!"); navigate("/dashboard", { replace: true }); }
+    else toast.success("Bem-vindo!"); // o useEffect cuida do redirect quando roles chegarem
   };
 
   const signUp = async (e: React.FormEvent) => {

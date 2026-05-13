@@ -12,11 +12,15 @@ export default function RequireRole({
   roles: AppRole[];
   children: React.ReactNode;
 }) {
-  const { hasAnyRole, loading, isInvestidor, isStaff } = useAuth();
+  const { hasAnyRole, loading, isAdmin, isOperacional, isInvestidor } = useAuth();
   if (loading) return null;
   if (!hasAnyRole(roles)) {
-    // Investidor cai no /meu-dre, staff cai no /dashboard
-    return <Navigate to={isInvestidor && !isStaff ? "/meu-dre" : "/dashboard"} replace />;
+    // Redireciona pra rota canônica do papel do usuário
+    let fallback = "/dashboard";
+    if (isAdmin) fallback = "/dashboard";
+    else if (isOperacional) fallback = "/operacional";
+    else if (isInvestidor) fallback = "/meu-dre";
+    return <Navigate to={fallback} replace />;
   }
   return <>{children}</>;
 }

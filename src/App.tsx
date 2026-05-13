@@ -18,6 +18,7 @@ import Manutencoes from "./pages/Manutencoes";
 import Adiantamentos from "./pages/Adiantamentos";
 import Custos from "./pages/Custos";
 import Importar from "./pages/Importar";
+import Operacional from "./pages/Operacional";
 import DREInvestidor from "./pages/DREInvestidor";
 import DREEmpresa from "./pages/DREEmpresa";
 import Equipe from "./pages/Equipe";
@@ -42,6 +43,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route element={<AppLayout />}>
               {/* Staff operacional (admin + operacional): operação dia a dia */}
+              <Route path="/operacional" element={<RequireRole roles={[...STAFF]}><Operacional /></RequireRole>} />
               <Route path="/imoveis" element={<RequireRole roles={[...STAFF]}><Imoveis /></RequireRole>} />
               <Route path="/hospedagens" element={<RequireRole roles={[...STAFF]}><Hospedagens /></RequireRole>} />
               <Route path="/servicos" element={<RequireRole roles={[...STAFF]}><Servicos /></RequireRole>} />

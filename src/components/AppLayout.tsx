@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Loader2 } from "lucide-react";
 
 export default function AppLayout() {
-  const { user, loading, isInvestidor, isStaff, roles } = useAuth();
+  const { user, loading, isAdmin, isOperacional, isInvestidor, isStaff, roles } = useAuth();
   const { pathname } = useLocation();
 
   if (loading) {
@@ -34,6 +34,10 @@ export default function AppLayout() {
   // Investidor entrando em rota de staff → manda para /meu-dre
   if (isInvestidor && !isStaff && !pathname.startsWith("/meu-dre")) {
     return <Navigate to="/meu-dre" replace />;
+  }
+  // Operacional sem admin entrando em /dashboard (admin-only) → manda para /operacional
+  if (isOperacional && !isAdmin && pathname === "/dashboard") {
+    return <Navigate to="/operacional" replace />;
   }
 
   return (

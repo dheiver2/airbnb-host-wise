@@ -1,7 +1,7 @@
 import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, Building2, Settings2, CalendarRange,
-  Wrench, Wallet, FileBarChart, Upload, Receipt, LogOut, UserCog, PieChart
+  Wrench, Wallet, FileBarChart, Upload, Receipt, LogOut, UserCog, PieChart, ClipboardList
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
@@ -21,6 +21,7 @@ type NavGroup = { label: string; items: NavItem[] };
 
 const ALL_STAFF: AppRole[] = ["admin", "operacional"];
 const ADMIN_ONLY: AppRole[] = ["admin"];
+const OPERACIONAL_ONLY: AppRole[] = ["operacional"];
 const INVESTIDOR_ONLY: AppRole[] = ["investidor"];
 
 const groups: NavGroup[] = [
@@ -28,6 +29,7 @@ const groups: NavGroup[] = [
     label: "Visão geral",
     items: [
       { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, roles: ADMIN_ONLY },
+      { title: "Visão Operacional", url: "/operacional", icon: ClipboardList, roles: OPERACIONAL_ONLY },
       { title: "Meu DRE", url: "/meu-dre", icon: PieChart, roles: INVESTIDOR_ONLY },
     ],
   },

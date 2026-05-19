@@ -16,12 +16,21 @@ import { AnexoDownload } from "@/components/AnexoDownload";
 import { toast } from "sonner";
 import { brl, dateBR, monthRange } from "@/lib/format";
 import { useCompetenciaState } from "@/hooks/useLatestCompetencia";
+import { useAuth } from "@/hooks/useAuth";
 
 const TIPOS_SERVICO = ["faxina", "lavanderia", "material", "manutencao"] as const;
 const AREAS = ["faxina", "lavanderia", "logistica", "casa", "manutencao", "escritorio"] as const;
 const AREA_LABELS: Record<string, string> = {
   faxina: "Faxina", lavanderia: "Lavanderia", logistica: "Logística",
   casa: "Casa", manutencao: "Manutenção", escritorio: "Escritório",
+};
+
+// Custos fixos (visíveis só pra admin)
+const CUSTOS_CATEGORIAS = ["gestao", "logistica", "chat", "escritorio", "folha", "diversos", "itens_apartamento"];
+const CUSTOS_LABELS: Record<string, string> = {
+  gestao: "Gestão", logistica: "Logística", chat: "Chat / atendimento",
+  escritorio: "Escritório (base)", folha: "Folha de pagamento",
+  diversos: "Custos diversos", itens_apartamento: "Itens para apartamento",
 };
 const BUCKET = "anexos";
 
@@ -76,6 +85,7 @@ function FileSelector({
 }
 
 export default function Servicos() {
+  const { isAdmin } = useAuth();
   const [mes, setMes] = useCompetenciaState();
   const [imoveis, setImoveis] = useState<any[]>([]);
   const [params, setParams] = useState<any[]>([]);
@@ -94,6 +104,11 @@ export default function Servicos() {
   const [filesMan, setFilesMan] = useState<File[]>([]);
   const fileInputManRef = useRef<HTMLInputElement>(null);
 
+  // ── Custos da empresa (só admin) ──
+  const [listCustos, setListCustos] = useState<any[]>([]);
+  const [openCustos, setOpenCustos] = useState(false);
+  const [formCustos, setFormCustos] = useState<any>({});
+
   // ── Gerenciar anexos de um item existente ──
   type AnexoCtx = { open: boolean; tabela: string; id: string; current: Anexo[] };
   const [anexoCtx, setAnexoCtx] = useState<AnexoCtx | null>(null);
@@ -109,7 +124,7 @@ export default function Servicos() {
       .then(({ data }) => setParams(data ?? []));
   }, []);
 
-  useEffect(() => { loadServ(); loadMan(); }, [mes]);
+  useEffect(() => { loadServ(); loadMan(); if (isAdmin) loadCustos(); }, [mes, isAdmin]);
 
   async function loadServ() {
     const { start, end } = monthRange(mes);
@@ -127,6 +142,32 @@ export default function Servicos() {
       .gte("mes_competencia", start).lte("mes_competencia", end)
       .order("data", { ascending: false });
     setListMan(data ?? []);
+  }
+
+  // ── Custos da empresa ──
+  async function loadCustos() {
+    const { start, end } = monthRange(mes);
+    const { data } = await supabase.from("custos_fixos").select("*")
+      .gte("mes_competencia", start).lte("mes_competencia", end)
+      .order("categoria");
+    setListCustos(data ?? []);
+  }
+
+  async function saveCustos() {
+    if (!formCustos.categoria || !formCustos.valor) return toast.error("Categoria e valor obrigatórios");
+    const competencia = `${mes}-01`;
+    const { error } = await supabase.from("custos_fixos").insert({
+      mes_competencia: competencia, categoria: formCustos.categoria,
+      descricao: formCustos.descricao, valor: Number(formCustos.valor),
+    });
+    if (error) return toast.error(error.message);
+    toast.success("Custo lançado"); setOpenCustos(false); setFormCustos({}); loadCustos();
+  }
+
+  async function removeCustos(id: string) {
+    if (!confirm("Excluir?")) return;
+    await supabase.from("custos_fixos").delete().eq("id", id);
+    loadCustos();
   }
 
   // ── Serviços: seleciona parâmetro ──
@@ -267,8 +308,10 @@ export default function Servicos() {
   return (
     <>
       <PageHeader
-        title="Serviços & Manutenções"
-        description="Serviços operacionais e manutenções dos imóveis."
+        title={isAdmin ? "Serviços, Manutenções & Custos" : "Serviços & Manutenções"}
+        description={isAdmin
+          ? "Serviços operacionais, manutenções dos imóveis e custos fixos da empresa."
+          : "Serviços operacionais e manutenções dos imóveis."}
         actions={<MonthPicker value={mes} onChange={setMes} />}
       />
 
@@ -277,6 +320,7 @@ export default function Servicos() {
           <TabsList>
             <TabsTrigger value="servicos">Serviços operacionais</TabsTrigger>
             <TabsTrigger value="manutencoes">Manutenções</TabsTrigger>
+            {isAdmin && <TabsTrigger value="custos">Custos da empresa</TabsTrigger>}
           </TabsList>
 
           {/* ── ABA SERVIÇOS ──────────────────────────────────── */}
@@ -549,6 +593,67 @@ export default function Servicos() {
               </Table>
             </CardContent></Card>
           </TabsContent>
+
+          {/* ── ABA CUSTOS DA EMPRESA (admin only) ────────────── */}
+          {isAdmin && (
+            <TabsContent value="custos" className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="text-sm text-muted-foreground">
+                  Total no mês: <span className="num font-semibold text-foreground">
+                    {brl(listCustos.reduce((s, c) => s + Number(c.valor || 0), 0))}
+                  </span>
+                </div>
+                <Dialog open={openCustos} onOpenChange={(o) => { setOpenCustos(o); if (!o) setFormCustos({}); }}>
+                  <DialogTrigger asChild>
+                    <Button><Plus className="mr-2 h-4 w-4" />Novo custo</Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader><DialogTitle>Novo custo do mês</DialogTitle></DialogHeader>
+                    <div className="grid gap-3">
+                      <div className="space-y-1.5">
+                        <Label>Categoria *</Label>
+                        <Select value={formCustos.categoria ?? ""} onValueChange={(v) => setFormCustos({ ...formCustos, categoria: v })}>
+                          <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                          <SelectContent>{CUSTOS_CATEGORIAS.map((c) => <SelectItem key={c} value={c}>{CUSTOS_LABELS[c]}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Descrição</Label>
+                        <Input value={formCustos.descricao ?? ""} onChange={(e) => setFormCustos({ ...formCustos, descricao: e.target.value })} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Valor *</Label>
+                        <Input type="number" step="0.01" value={formCustos.valor ?? ""} onChange={(e) => setFormCustos({ ...formCustos, valor: e.target.value })} />
+                      </div>
+                    </div>
+                    <DialogFooter><Button onClick={saveCustos}>Salvar</Button></DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
+              <Card className="shadow-card"><CardContent className="overflow-x-auto p-0">
+                <Table className="min-w-[760px]">
+                  <TableHeader><TableRow>
+                    <TableHead>Categoria</TableHead><TableHead>Descrição</TableHead>
+                    <TableHead>Valor</TableHead><TableHead></TableHead>
+                  </TableRow></TableHeader>
+                  <TableBody>
+                    {listCustos.length === 0 && (
+                      <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Sem custos lançados.</TableCell></TableRow>
+                    )}
+                    {listCustos.map((c) => (
+                      <TableRow key={c.id}>
+                        <TableCell className="font-medium">{CUSTOS_LABELS[c.categoria] ?? c.categoria}</TableCell>
+                        <TableCell className="text-muted-foreground">{c.descricao ?? "—"}</TableCell>
+                        <TableCell className="num">{brl(c.valor)}</TableCell>
+                        <TableCell><Button size="icon" variant="ghost" onClick={() => removeCustos(c.id)}><Trash2 className="h-4 w-4" /></Button></TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent></Card>
+            </TabsContent>
+          )}
         </Tabs>
       </div>
 

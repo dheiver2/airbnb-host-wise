@@ -678,7 +678,7 @@ export default function Importar() {
       errosDetalhe.push(err?.message ?? "Erro inesperado");
       toast.error(`Erro na importação: ${err?.message ?? "Erro inesperado"}`);
     } finally {
-      const { error: logErr } = await supabase.from("importacoes_airbnb").insert({
+      const { error: logErr } = await (supabase.from("importacoes_airbnb") as any).insert({
         tipo, arquivo: filename, total_linhas: rows.length, inseridos, duplicados, erros,
       });
       if (logErr) console.error("Falha ao salvar histórico:", logErr.message);

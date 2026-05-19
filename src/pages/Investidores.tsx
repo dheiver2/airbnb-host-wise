@@ -38,7 +38,7 @@ export default function Investidores() {
     const payload = { nome: editing.nome, documento: editing.documento, email: editing.email, telefone: editing.telefone, pix: editing.pix, status: (editing.status as any) ?? "ativo" };
     const res = editing.id
       ? await supabase.from("investidores").update(payload).eq("id", editing.id)
-      : await supabase.from("investidores").insert(payload);
+      : await (supabase.from("investidores") as any).insert(payload);
     if (res.error) return toast.error(res.error.message);
     toast.success("Salvo!"); setOpen(false); setEditing(null); load();
   }

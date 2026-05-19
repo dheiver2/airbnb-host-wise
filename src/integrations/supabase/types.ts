@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       adiantamentos: {
         Row: {
+          conta_id: string
           created_at: string
           data: string
           id: string
@@ -29,6 +30,7 @@ export type Database = {
           valor: number
         }
         Insert: {
+          conta_id: string
           created_at?: string
           data: string
           id?: string
@@ -42,6 +44,7 @@ export type Database = {
           valor: number
         }
         Update: {
+          conta_id?: string
           created_at?: string
           data?: string
           id?: string
@@ -74,6 +77,7 @@ export type Database = {
       custos_fixos: {
         Row: {
           categoria: string
+          conta_id: string
           created_at: string
           descricao: string | null
           id: string
@@ -82,6 +86,7 @@ export type Database = {
         }
         Insert: {
           categoria: string
+          conta_id: string
           created_at?: string
           descricao?: string | null
           id?: string
@@ -90,6 +95,7 @@ export type Database = {
         }
         Update: {
           categoria?: string
+          conta_id?: string
           created_at?: string
           descricao?: string | null
           id?: string
@@ -102,6 +108,7 @@ export type Database = {
         Row: {
           capacidade: number
           codigo: string
+          conta_id: string
           created_at: string
           custo_faxina: number
           custo_lavanderia: number
@@ -118,6 +125,7 @@ export type Database = {
         Insert: {
           capacidade?: number
           codigo: string
+          conta_id: string
           created_at?: string
           custo_faxina?: number
           custo_lavanderia?: number
@@ -134,6 +142,7 @@ export type Database = {
         Update: {
           capacidade?: number
           codigo?: string
+          conta_id?: string
           created_at?: string
           custo_faxina?: number
           custo_lavanderia?: number
@@ -160,6 +169,7 @@ export type Database = {
       importacoes_airbnb: {
         Row: {
           arquivo: string | null
+          conta_id: string
           created_at: string
           duplicados: number
           erros: number
@@ -171,6 +181,7 @@ export type Database = {
         }
         Insert: {
           arquivo?: string | null
+          conta_id: string
           created_at?: string
           duplicados?: number
           erros?: number
@@ -182,6 +193,7 @@ export type Database = {
         }
         Update: {
           arquivo?: string | null
+          conta_id?: string
           created_at?: string
           duplicados?: number
           erros?: number
@@ -195,6 +207,7 @@ export type Database = {
       }
       investidores: {
         Row: {
+          conta_id: string
           created_at: string
           documento: string | null
           email: string | null
@@ -208,6 +221,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          conta_id: string
           created_at?: string
           documento?: string | null
           email?: string | null
@@ -221,6 +235,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          conta_id?: string
           created_at?: string
           documento?: string | null
           email?: string | null
@@ -240,6 +255,7 @@ export type Database = {
           anexos: Json | null
           area: string | null
           categoria: string | null
+          conta_id: string
           created_at: string
           custo: number
           data: string
@@ -256,6 +272,7 @@ export type Database = {
           anexos?: Json | null
           area?: string | null
           categoria?: string | null
+          conta_id: string
           created_at?: string
           custo?: number
           data: string
@@ -272,6 +289,7 @@ export type Database = {
           anexos?: Json | null
           area?: string | null
           categoria?: string | null
+          conta_id?: string
           created_at?: string
           custo?: number
           data?: string
@@ -306,6 +324,7 @@ export type Database = {
           area: string | null
           ativo: boolean
           categoria: string | null
+          conta_id: string
           created_at: string
           custo: number
           faixas_hospedes: Json | null
@@ -319,6 +338,7 @@ export type Database = {
           area?: string | null
           ativo?: boolean
           categoria?: string | null
+          conta_id: string
           created_at?: string
           custo?: number
           faixas_hospedes?: Json | null
@@ -332,6 +352,7 @@ export type Database = {
           area?: string | null
           ativo?: boolean
           categoria?: string | null
+          conta_id?: string
           created_at?: string
           custo?: number
           faixas_hospedes?: Json | null
@@ -354,6 +375,7 @@ export type Database = {
       payouts: {
         Row: {
           codigo_referencia: string | null
+          conta_id: string
           created_at: string
           data: string
           id: string
@@ -364,6 +386,7 @@ export type Database = {
         }
         Insert: {
           codigo_referencia?: string | null
+          conta_id: string
           created_at?: string
           data: string
           id?: string
@@ -374,6 +397,7 @@ export type Database = {
         }
         Update: {
           codigo_referencia?: string | null
+          conta_id?: string
           created_at?: string
           data?: string
           id?: string
@@ -410,6 +434,7 @@ export type Database = {
           check_in: string
           check_out: string
           codigo_airbnb: string | null
+          conta_id: string
           created_at: string
           hospedes: number
           id: string
@@ -425,6 +450,7 @@ export type Database = {
           check_in: string
           check_out: string
           codigo_airbnb?: string | null
+          conta_id: string
           created_at?: string
           hospedes?: number
           id?: string
@@ -440,6 +466,7 @@ export type Database = {
           check_in?: string
           check_out?: string
           codigo_airbnb?: string | null
+          conta_id?: string
           created_at?: string
           hospedes?: number
           id?: string
@@ -465,6 +492,7 @@ export type Database = {
         Row: {
           anexos: Json | null
           area: string | null
+          conta_id: string
           created_at: string
           custo_real: number
           data: string
@@ -481,6 +509,7 @@ export type Database = {
         Insert: {
           anexos?: Json | null
           area?: string | null
+          conta_id: string
           created_at?: string
           custo_real?: number
           data: string
@@ -497,6 +526,7 @@ export type Database = {
         Update: {
           anexos?: Json | null
           area?: string | null
+          conta_id?: string
           created_at?: string
           custo_real?: number
           data?: string
@@ -536,18 +566,21 @@ export type Database = {
       }
       user_roles: {
         Row: {
+          conta_id: string
           created_at: string
           id: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Insert: {
+          conta_id: string
           created_at?: string
           id?: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Update: {
+          conta_id?: string
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]

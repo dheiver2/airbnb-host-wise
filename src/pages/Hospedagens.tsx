@@ -48,7 +48,7 @@ export default function Hospedagens() {
       valor_liquido: Number(form.valor_liquido ?? form.valor_bruto ?? 0),
       mes_competencia: competencia,
     };
-    const { error } = await supabase.from("reservas").insert(payload);
+    const { error } = await (supabase.from("reservas") as any).insert(payload);
     if (error) return toast.error(error.message);
     toast.success("Hospedagem registrada"); setOpen(false); setForm({}); load();
   }

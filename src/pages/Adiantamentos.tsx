@@ -40,7 +40,7 @@ export default function Adiantamentos() {
   async function save() {
     if (!form.investidor_id || !form.data || !form.valor) return toast.error("Preencha investidor, data e valor");
     const competencia = `${String(form.data).slice(0, 7)}-01`;
-    const { error } = await supabase.from("adiantamentos").insert({
+    const { error } = await (supabase.from("adiantamentos") as any).insert({
       investidor_id: form.investidor_id, imovel_id: form.imovel_id || null,
       data: form.data, valor: Number(form.valor), origem: form.origem,
       mes_competencia: competencia, observacoes: form.observacoes,

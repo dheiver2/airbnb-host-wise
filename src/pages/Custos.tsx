@@ -38,7 +38,7 @@ export default function Custos() {
   async function save() {
     if (!form.categoria || !form.valor) return toast.error("Categoria e valor obrigatórios");
     const competencia = `${mes}-01`;
-    const { error } = await supabase.from("custos_fixos").insert({
+    const { error } = await (supabase.from("custos_fixos") as any).insert({
       mes_competencia: competencia, categoria: form.categoria, descricao: form.descricao, valor: Number(form.valor),
     });
     if (error) return toast.error(error.message);

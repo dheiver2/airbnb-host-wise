@@ -48,7 +48,7 @@ export default function Imoveis() {
       percentual_comissao: Number(editing.percentual_comissao ?? 20),
       status: editing.status ?? "ativo",
     };
-    const res = editing.id ? await supabase.from("imoveis").update(payload).eq("id", editing.id) : await supabase.from("imoveis").insert(payload);
+    const res = editing.id ? await supabase.from("imoveis").update(payload).eq("id", editing.id) : await (supabase.from("imoveis") as any).insert(payload);
     if (res.error) return toast.error(res.error.message);
     toast.success("Salvo!"); setOpen(false); setEditing(null); load();
   }

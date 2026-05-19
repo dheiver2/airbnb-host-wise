@@ -467,7 +467,7 @@ export default function Importar() {
         const CHUNK = 500;
         for (let i = 0; i < toInsP.length; i += CHUNK) {
           const chunk = toInsP.slice(i, i + CHUNK);
-          const { error } = await supabase.from("payouts").insert(chunk);
+          const { error } = await (supabase.from("payouts") as any).insert(chunk);
           if (error) { erros += chunk.length; if (errosDetalhe.length < 5) errosDetalhe.push(error.message); }
           else inseridos += chunk.length;
         }
@@ -495,7 +495,7 @@ export default function Importar() {
         const CHUNK = 500;
         for (let i = 0; i < toInsert.length; i += CHUNK) {
           const chunk = toInsert.slice(i, i + CHUNK);
-          const { error } = await supabase.from("reservas").insert(chunk.map((r) => ({ ...r, hospedes: 1 })));
+          const { error } = await (supabase.from("reservas") as any).insert(chunk.map((r) => ({ ...r, hospedes: 1 })));
           if (error) { erros += chunk.length; if (errosDetalhe.length < 5) errosDetalhe.push(error.message); }
           else inseridos += chunk.length;
         }
@@ -528,7 +528,7 @@ export default function Importar() {
         const CHUNK = 500;
         for (let i = 0; i < toInsertAdt.length; i += CHUNK) {
           const chunk = toInsertAdt.slice(i, i + CHUNK);
-          const { error } = await supabase.from("adiantamentos").insert(
+          const { error } = await (supabase.from("adiantamentos") as any).insert(
             chunk.map((r) => ({ ...r, origem: "airbnb_direto" as const }))
           );
           if (error) { erros += chunk.length; if (errosDetalhe.length < 5) errosDetalhe.push(error.message); }
@@ -604,7 +604,7 @@ export default function Importar() {
         const CHUNK = 500;
         for (let i = 0; i < toInsert.length; i += CHUNK) {
           const chunk = toInsert.slice(i, i + CHUNK);
-          const { error } = await supabase.from("reservas").insert(
+          const { error } = await (supabase.from("reservas") as any).insert(
             chunk.map((r) => ({ ...r, hospedes: 1 }))
           );
           if (error) {
@@ -664,7 +664,7 @@ export default function Importar() {
         const CHUNK = 500;
         for (let i = 0; i < toInsertAdt.length; i += CHUNK) {
           const chunk = toInsertAdt.slice(i, i + CHUNK);
-          const { error } = await supabase.from("adiantamentos").insert(
+          const { error } = await (supabase.from("adiantamentos") as any).insert(
             chunk.map((r) => ({ ...r, origem: "airbnb_direto" as const }))
           );
           if (error) { erros += chunk.length; if (errosDetalhe.length < 5) errosDetalhe.push(error.message); }

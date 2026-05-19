@@ -60,42 +60,54 @@ export default function DREEmpresa() {
     const sumServ = (tipo: string, field: "valor_cobrado" | "custo_real") =>
       servicos.filter((x) => x.tipo === tipo).reduce((s, x) => s + Number(x[field] || 0), 0);
 
-    const recFaxina = sumServ("faxina", "valor_cobrado");
-    const recLav = sumServ("lavanderia", "valor_cobrado");
-    // recMat agora inclui repasse a custo (break-even) do material_limpeza dos custos_fixos.
-    // Lógica simétrica com manutenções rateio=investidor: empresa repassa o custo.
-    // O custo entra normalmente em "Custo de material de limpeza" — net no lucro = 0.
-    const recMat = sumServ("material", "valor_cobrado");
-    // Fallback no custo quando valor_cobrado=0 com rateio=investidor
-    const recManut = manuts.filter((x) => x.rateio === "investidor").reduce((s, x) => s + Number(x.valor_cobrado || x.custo || 0), 0);
+    // ── FAXINA & LAVANDERIA: receita+custo automáticos por reserva ──
+    // Cada reserva gera 1 faxina e 1 lavanderia automaticamente (com base nos
+    // valores cadastrados em imoveis). Entries em servicos_operacionais são
+    // extras (faxinas adicionais, casos especiais).
+    const recFaxinaPorReserva = reservas.reduce((acc, r) => {
+      const im = imoveisMap[r.imovel_id];
+      return im ? acc + Number(im.valor_faxina || 0) : acc;
+    }, 0);
+    const custoFaxinaPorReserva = reservas.reduce((acc, r) => {
+      const im = imoveisMap[r.imovel_id];
+      return im ? acc + Number(im.custo_faxina || 0) : acc;
+    }, 0);
+    const recLavPorReserva = reservas.reduce((acc, r) => {
+      const im = imoveisMap[r.imovel_id];
+      return im ? acc + Number(im.valor_lavanderia || 0) : acc;
+    }, 0);
+    const custoLavPorReserva = reservas.reduce((acc, r) => {
+      const im = imoveisMap[r.imovel_id];
+      return im ? acc + Number(im.custo_lavanderia || 0) : acc;
+    }, 0);
 
-    const custoFaxina = sumServ("faxina", "custo_real");
-    const custoLav = sumServ("lavanderia", "custo_real");
-    // Custo de material de limpeza: vem de DUAS fontes
-    //   (a) servicos_operacionais tipo='material' (raro, requer imovel)
-    //   (b) custos_fixos categoria='material_limpeza' (massa importada do XLSX)
+    const recFaxina = recFaxinaPorReserva + sumServ("faxina", "valor_cobrado");
+    const custoFaxina = custoFaxinaPorReserva + sumServ("faxina", "custo_real");
+    const recLav = recLavPorReserva + sumServ("lavanderia", "valor_cobrado");
+    const custoLav = custoLavPorReserva + sumServ("lavanderia", "custo_real");
+
+    // Material em servicos_operacionais (raro, requer imovel)
+    const recMat = sumServ("material", "valor_cobrado");
     const custoMatServ = sumServ("material", "custo_real");
 
+    // Manutenção rateio=investidor: fallback ao custo (sem markup explícito)
+    const recManut = manuts.filter((x) => x.rateio === "investidor")
+      .reduce((s, x) => s + Number(x.valor_cobrado || x.custo || 0), 0);
     const custoManut = manuts.reduce((s, x) => s + Number(x.custo || 0), 0);
 
     // Despesas fixas agrupadas
     const fixos: Record<string, number> = {};
     custos.forEach((c) => { fixos[c.categoria] = (fixos[c.categoria] || 0) + Number(c.valor || 0); });
 
-    // Material de limpeza (custos_fixos) + tipo='material' em servicos = custo total mat. limpeza
+    // Material de limpeza: receita = custo (repasse a custo automático)
     const custoMaterialLimpeza = (fixos["material_limpeza"] ?? 0) + custoMatServ;
-
-    // Repasse a custo: receita de material de limpeza = custo (break-even auto).
-    // Empresa repassa proporcionalmente aos investidores, mesmo padrão das manutenções.
-    // Net no lucro = 0 (receita - custo = 0).
     const recMaterialLimpeza = recMat + custoMaterialLimpeza;
 
-    // Itens p/Apartamento: separado do custo total (linha de referência, yellow)
+    // Itens p/Apartamento: ENTRA no Custo Total (conforme template real do Excel).
+    // O highlight amarelo é apenas visual — não afeta a matemática.
     const custoItensApt = fixos["itens_apartamento"] ?? 0;
-
-    // Total fixos (excluindo material_limpeza pq vai pra linha específica, e itens_apartamento pq sai do custo total)
     const totalFixosNoCusto = Object.entries(fixos)
-      .filter(([k]) => k !== "itens_apartamento" && k !== "material_limpeza")
+      .filter(([k]) => k !== "material_limpeza") // material_limpeza tem linha própria
       .reduce((s, [, v]) => s + v, 0);
 
     const receitaBruta = recComissao + recFaxina + recLav + recMaterialLimpeza + recManut;
@@ -171,24 +183,17 @@ export default function DREEmpresa() {
               <Row label="Custo de manutenção" valor={calc.custoManut} />
               {CUSTO_FIXO_ORDEM.map((k) => {
                 const v = calc.fixos[k] ?? 0;
-                if (v === 0) return null; // não polui DRE com categorias zeradas
+                if (v === 0) return null;
                 return <Row key={k} label={CUSTO_LABELS[k]} valor={v} />;
               })}
-              <Row label="= Custo Total" valor={calc.custoTotal} tipo="subtotal" />
-
-              <Row label={`= Receita Líquida · Margem ${pct(calc.margem)}`} valor={calc.liquida} tipo="total" />
-
-              {/* Linha de referência: Itens p/Apartamento NÃO entra no Custo Total */}
+              {/* Itens p/Apartamento — destacado em amarelo, mas COMPÕE o Custo Total */}
               {calc.custoItensApt > 0 && (
                 <Row label="Custo dos itens p/Ap" valor={calc.custoItensApt} tipo="destaque" />
               )}
+              <Row label="= Custo Total" valor={calc.custoTotal} tipo="subtotal" />
+
+              <Row label={`= Receita Líquida · Margem ${pct(calc.margem)}`} valor={calc.liquida} tipo="total" />
             </ul>
-            {calc.custoItensApt > 0 && (
-              <div className="border-t border-border bg-muted/20 px-5 py-2 text-xs text-muted-foreground">
-                ⓘ "Custo dos itens p/Ap" é referência informativa — não compõe o Custo Total acima
-                (são investimentos no apartamento, separados do P&L operacional).
-              </div>
-            )}
           </CardContent>
         </Card>
       </div>

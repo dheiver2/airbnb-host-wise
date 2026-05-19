@@ -1,0 +1,112 @@
+mindmap
+  root((SA7D<br/>Airbnb Host Wise))
+    🎭 Papéis
+      Admin
+        Vê tudo da conta
+        Gerencia equipe
+        Convida usuários
+        Conta_id = self
+      Operacional
+        Hospedagens, Serviços, Manutenções
+        Imóveis (read-only)
+        Adiantamentos, Importar
+        Conta_id = admin
+      Investidor
+        Apenas /meu-dre
+        Saldo a repassar
+        Conta_id = admin
+    🌐 Rotas
+      Público
+        /
+        /auth
+      Staff
+        /operacional landing
+        /imoveis
+        /hospedagens
+        /servicos 3 abas
+        /adiantamentos
+        /importar
+      Admin
+        /dashboard
+        /investidores
+        /dre/empresa
+        /dre/investidor
+        /equipe
+        /parametros
+        /custos
+      Investidor
+        /meu-dre
+    💾 Banco Supabase
+      Auth
+        auth.users
+        profiles
+        user_roles
+      Entidades
+        investidores
+        imoveis
+        parametros_servico
+      Lançamentos
+        reservas
+        payouts
+        adiantamentos
+        servicos_operacionais
+        manutencoes
+        custos_fixos
+      Multi-tenant
+        conta_id em todas
+        RLS por conta
+        Trigger auto-fill
+        minha_conta function
+      Storage privado
+        bucket anexos
+        signed URLs 60s
+        path-based RLS
+    🔄 Fluxo Dados
+      Entrada
+        Importar CSV Airbnb
+        Forms operacionais
+        Forms admin
+      Cálculos
+        Comissão x reservas
+        Faxina x imovel x reservas
+        Lavanderia x imovel x reservas
+        Material limpeza break-even
+        Manutenção rateio investidor
+      DRE Empresa
+        Receita Bruta
+        Custo Total
+        Receita Líquida
+        Margem
+      DRE Investidor
+        Faturamento bruto
+        Menos comissão
+        Menos serviços
+        Saldo a repassar
+    🛠️ Frontend
+      React + Vite
+      shadcn/ui
+      Tailwind
+      React Router
+      useAuth context
+      AppSidebar dinâmico
+      RequireRole gate
+      AnexoDownload signed URL
+    ⚙️ Edge Functions
+      invite-user
+        Valida admin
+        Cria user via auth admin
+        Seta role + conta_id
+        Liga investidor por email
+    📜 Migrations
+      Base schema
+      RLS reescrita
+      Investidor user_link
+      Multi-tenant
+      Payouts conta_id
+      Storage privado
+      Payouts investidor_id
+    🧪 Seeds Scripts
+      seed-operacionais
+      seed-plano-contas
+      fix-conta-adolfo
+      audit-multi-tenant

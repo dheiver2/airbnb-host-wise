@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>SA7D — Mapa Mental do Projeto</title>
+  <style>
+    html, body { margin: 0; padding: 0; height: 100%; font-family: system-ui, sans-serif; }
+    #title { position: absolute; top: 8px; left: 16px; z-index: 10; color: #555; font-size: 12px; }
+    #mindmap { width: 100vw; height: 100vh; }
+  </style>
+</head>
+<body>
+  <div id="title">SA7D — Mapa Mental (clique nos nós pra expandir/recolher)</div>
+  <svg id="mindmap"></svg>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <script src="https://cdn.jsdelivr.net/npm/markmap-view@0.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/markmap-lib@0.17/dist/browser/index.js"></script>
+  <script>
+    const markdown = `
+# SA7D — Airbnb Host Wise
+
+## 🎭 Papéis
+
+### Admin (Adolfo)
+- Vê tudo da conta
+- Gerencia equipe & convida usuários
+- \`conta_id = self.user_id\`
+
+### Operacional (Julia, Elizana)
+- Hospedagens, Serviços, Manutenções, Adiantamentos, Importar
+- Imóveis (read-only)
+- \`conta_id = admin.user_id\`
+
+### Investidor
+- Apenas \`/meu-dre\`
+- Saldo a repassar
+- \`conta_id = admin.user_id\`
+
+## 🌐 Rotas
+
+### Público
+- \`/\` Landing
+- \`/auth\` Login
+
+### Staff
+- \`/operacional\` (landing)
+- \`/imoveis\`
+- \`/hospedagens\`
+- \`/servicos\` (3 abas)
+- \`/adiantamentos\`
+- \`/importar\`
+
+### Admin
+- \`/dashboard\`
+- \`/investidores\`
+- \`/dre/empresa\` (DRE SA7D)
+- \`/dre/investidor\`
+- \`/equipe\`
+- \`/parametros\`
+- \`/custos\`
+
+### Investidor
+- \`/meu-dre\`
+
+## 💾 Banco (Supabase)
+
+### Auth
+- \`auth.users\`
+- \`profiles\`
+- \`user_roles\` (com conta_id)
+
+### Entidades
+- \`investidores\` (user_id + conta_id)
+- \`imoveis\` (investidor_id + conta_id, valor/custo faxina/lav, %comissão)
+- \`parametros_servico\`
+
+### Lançamentos
+- \`reservas\` (check_in, check_out, valor_bruto, valor_liquido, mes_competencia)
+- \`payouts\` (data, valor_pago, is_sa7d, investidor_id, recebedor)
+- \`adiantamentos\` (investidor_id, valor, is_sa7d)
+- \`servicos_operacionais\` (tipo: faxina/lavanderia/material/manutencao)
+- \`manutencoes\` (descricao, custo, valor_cobrado, rateio)
+- \`custos_fixos\`
+  - gestao, logistica, chat, escritorio
+  - folha, material_limpeza, diversos
+  - itens_apartamento (yellow)
+
+### Multi-tenant
+- \`conta_id\` em todas (NOT NULL)
+- Trigger \`tg_set_conta\` auto-fill
+- RLS exige \`conta_id = minha_conta(auth.uid())\`
+- Função \`private.minha_conta(uuid)\`
+
+### Storage (privado)
+- bucket \`anexos\`
+- Signed URLs (TTL 60s)
+- Path-based RLS via \`private.anexo_acessivel\`
+
+## 🔄 Fluxo de Dados
+
+### Entrada
+- **Importar.tsx**: CSV Airbnb → reservas + payouts + adiantamentos
+- Forms /servicos, /adiantamentos, /custos
+
+### Cálculos DRE Empresa
+- Comissão = Σ(reserva.valor_bruto × imovel.%comissão)
+- Faxina = Σ(reservas × imovel.valor_faxina) + servicos
+- Lavanderia = Σ(reservas × imovel.valor_lavanderia) + servicos
+- Material limpeza = custo (break-even auto)
+- Manutenção = rateio=investidor com fallback ao custo
+
+### DRE Empresa
+- Receita Bruta
+- Custo Total (inclui Itens p/Ap yellow)
+- Receita Líquida (Lucro SA7D)
+
+### DRE Investidor
+- Faturamento - Comissão - Serviços - Manut cobrada
+- Menos adiantamentos já recebidos
+- = Saldo a repassar
+
+### Dashboard
+- Faturamento bruto = Σ payouts (todos)
+- Adiantamentos = Σ adiantamentos.is_sa7d=false
+- Lucro = mesmo que DRE Empresa
+
+## 🛠️ Frontend
+
+### Stack
+- React + Vite + TypeScript
+- shadcn/ui + Tailwind
+- React Router
+
+### Componentes-chave
+- \`useAuth\` (context com roles)
+- \`AppSidebar\` (menu por papel)
+- \`AppLayout\` (gate auth + redirect)
+- \`RequireRole\` (gate por rota)
+- \`AnexoDownload\` (signed URL on-click)
+
+## ⚙️ Edge Functions (Deno)
+
+### invite-user
+1. Valida caller é admin
+2. Cria user via \`auth.admin.inviteUserByEmail\`
+3. Seta \`user_roles\` com role + conta_id
+4. Liga investidor por email (mesma conta)
+
+## 📜 Migrations
+
+- \`20260501204133\` base schema + handle_new_user
+- \`20260501215244\` RLS reescrita (private.*)
+- \`20260508000000\` investidor user_link + RLS
+- \`20260513000000\` multi-tenant (conta_id)
+- \`20260513000001\` payouts ganha conta_id
+- \`20260513000002\` storage privado + bootstrap multi-admin
+- \`20260513000003\` payouts.investidor_id + match fuzzy
+
+## 🧪 Seeds & Scripts
+
+- \`seed-operacionais-julia-elizana.sql\`
+- \`seed-plano-contas-adolfo.sql\` (XLSX → tabelas)
+- \`fix-conta-adolfo.sql\` (remedia backfill)
+- \`audit-multi-tenant.sql\` (validação RLS)
+`;
+
+    // Transform markdown → markmap
+    const { Transformer } = window.markmap;
+    const transformer = new Transformer();
+    const { root } = transformer.transform(markdown);
+    const { Markmap } = window.markmap;
+    Markmap.create('#mindmap', null, root);
+  </script>
+</body>
+</html>

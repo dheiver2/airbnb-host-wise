@@ -62,6 +62,9 @@ export default function DREEmpresa() {
 
     const recFaxina = sumServ("faxina", "valor_cobrado");
     const recLav = sumServ("lavanderia", "valor_cobrado");
+    // recMat agora inclui repasse a custo (break-even) do material_limpeza dos custos_fixos.
+    // Lógica simétrica com manutenções rateio=investidor: empresa repassa o custo.
+    // O custo entra normalmente em "Custo de material de limpeza" — net no lucro = 0.
     const recMat = sumServ("material", "valor_cobrado");
     // Fallback no custo quando valor_cobrado=0 com rateio=investidor
     const recManut = manuts.filter((x) => x.rateio === "investidor").reduce((s, x) => s + Number(x.valor_cobrado || x.custo || 0), 0);
@@ -82,6 +85,11 @@ export default function DREEmpresa() {
     // Material de limpeza (custos_fixos) + tipo='material' em servicos = custo total mat. limpeza
     const custoMaterialLimpeza = (fixos["material_limpeza"] ?? 0) + custoMatServ;
 
+    // Repasse a custo: receita de material de limpeza = custo (break-even auto).
+    // Empresa repassa proporcionalmente aos investidores, mesmo padrão das manutenções.
+    // Net no lucro = 0 (receita - custo = 0).
+    const recMaterialLimpeza = recMat + custoMaterialLimpeza;
+
     // Itens p/Apartamento: separado do custo total (linha de referência, yellow)
     const custoItensApt = fixos["itens_apartamento"] ?? 0;
 
@@ -90,13 +98,13 @@ export default function DREEmpresa() {
       .filter(([k]) => k !== "itens_apartamento" && k !== "material_limpeza")
       .reduce((s, [, v]) => s + v, 0);
 
-    const receitaBruta = recComissao + recFaxina + recLav + recMat + recManut;
+    const receitaBruta = recComissao + recFaxina + recLav + recMaterialLimpeza + recManut;
     const custoTotal = custoFaxina + custoLav + custoMaterialLimpeza + custoManut + totalFixosNoCusto;
     const liquida = receitaBruta - custoTotal;
     const margem = receitaBruta > 0 ? (liquida / receitaBruta) * 100 : 0;
 
     return {
-      recComissao, recFaxina, recLav, recMat, recManut,
+      recComissao, recFaxina, recLav, recMaterialLimpeza, recManut,
       custoFaxina, custoLav, custoMaterialLimpeza, custoManut, fixos,
       custoItensApt, receitaBruta, custoTotal, liquida, margem,
     };
@@ -152,7 +160,7 @@ export default function DREEmpresa() {
               <Row label="Receita de comissão" valor={calc.recComissao} />
               <Row label="Receita de faxina" valor={calc.recFaxina} />
               <Row label="Receita de lavanderia" valor={calc.recLav} />
-              <Row label="Receita para Material de limpeza" valor={calc.recMat} />
+              <Row label="Receita para Material de limpeza" valor={calc.recMaterialLimpeza} />
               <Row label="Receita de Manutenção" valor={calc.recManut} />
               <Row label="= Receita Bruta" valor={calc.receitaBruta} tipo="subtotal" />
 

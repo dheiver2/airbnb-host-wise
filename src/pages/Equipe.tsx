@@ -145,8 +145,8 @@ export default function Equipe() {
 
   const addRoleToUser = async (userId: string, role: AppRole) => {
     setBusy(userId);
-    const { error } = await supabase
-      .from("user_roles")
+    const { error } = await (supabase
+      .from("user_roles") as any)
       .insert({ user_id: userId, role });
     setBusy(null);
     if (error) {

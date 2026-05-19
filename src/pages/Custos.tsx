@@ -14,10 +14,11 @@ import { toast } from "sonner";
 import { brl, monthInputValue, monthRange } from "@/lib/format";
 import { useCompetenciaState } from "@/hooks/useLatestCompetencia";
 
-const CATEGORIAS = ["gestao", "logistica", "chat", "escritorio", "folha", "diversos", "itens_apartamento"];
+const CATEGORIAS = ["gestao", "logistica", "chat", "escritorio", "folha", "material_limpeza", "diversos", "itens_apartamento"];
 const LABELS: Record<string, string> = {
   gestao: "Gestão", logistica: "Logística", chat: "Chat / atendimento",
   escritorio: "Escritório (base)", folha: "Folha de pagamento",
+  material_limpeza: "Material de limpeza",
   diversos: "Custos diversos", itens_apartamento: "Itens para apartamento",
 };
 

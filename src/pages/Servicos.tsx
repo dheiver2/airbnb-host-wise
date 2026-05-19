@@ -26,9 +26,10 @@ const AREA_LABELS: Record<string, string> = {
 };
 
 // Custos fixos (visíveis só pra admin)
-const CUSTOS_CATEGORIAS = ["gestao", "logistica", "chat", "escritorio", "folha", "diversos", "itens_apartamento"];
+const CUSTOS_CATEGORIAS = ["gestao", "logistica", "chat", "escritorio", "folha", "material_limpeza", "diversos", "itens_apartamento"];
 const CUSTOS_LABELS: Record<string, string> = {
   gestao: "Gestão", logistica: "Logística", chat: "Chat / atendimento",
+  material_limpeza: "Material de limpeza",
   escritorio: "Escritório (base)", folha: "Folha de pagamento",
   diversos: "Custos diversos", itens_apartamento: "Itens para apartamento",
 };

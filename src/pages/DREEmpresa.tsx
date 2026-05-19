@@ -12,6 +12,7 @@ import { Printer } from "lucide-react";
 // Gestão, Logística, Chat, Escritório — depois Folha e Diversos (mantidos pra
 // integridade da soma). Itens p/Apartamento sai DESTE bloco e vira linha
 // destacada abaixo da Receita Líquida (não entra em Custo Total).
+// Material de limpeza é categoria separada (consumível operacional).
 const CUSTO_FIXO_ORDEM = ["gestao", "logistica", "chat", "escritorio", "folha", "diversos"] as const;
 const CUSTO_LABELS: Record<string, string> = {
   gestao: "Custos de Gestão",
@@ -20,6 +21,7 @@ const CUSTO_LABELS: Record<string, string> = {
   escritorio: "Custo do escritório (Base)",
   folha: "Custo de Folha de pagamento",
   diversos: "Custos diversos",
+  material_limpeza: "Custo de material de limpeza",
   itens_apartamento: "Custo dos itens p/Ap",
 };
 
@@ -66,27 +68,36 @@ export default function DREEmpresa() {
 
     const custoFaxina = sumServ("faxina", "custo_real");
     const custoLav = sumServ("lavanderia", "custo_real");
-    const custoMat = sumServ("material", "custo_real");
+    // Custo de material de limpeza: vem de DUAS fontes
+    //   (a) servicos_operacionais tipo='material' (raro, requer imovel)
+    //   (b) custos_fixos categoria='material_limpeza' (massa importada do XLSX)
+    const custoMatServ = sumServ("material", "custo_real");
+
     const custoManut = manuts.reduce((s, x) => s + Number(x.custo || 0), 0);
 
     // Despesas fixas agrupadas
     const fixos: Record<string, number> = {};
     custos.forEach((c) => { fixos[c.categoria] = (fixos[c.categoria] || 0) + Number(c.valor || 0); });
 
-    // Itens p/Apartamento: separado do custo total (linha de referência)
+    // Material de limpeza (custos_fixos) + tipo='material' em servicos = custo total mat. limpeza
+    const custoMaterialLimpeza = (fixos["material_limpeza"] ?? 0) + custoMatServ;
+
+    // Itens p/Apartamento: separado do custo total (linha de referência, yellow)
     const custoItensApt = fixos["itens_apartamento"] ?? 0;
+
+    // Total fixos (excluindo material_limpeza pq vai pra linha específica, e itens_apartamento pq sai do custo total)
     const totalFixosNoCusto = Object.entries(fixos)
-      .filter(([k]) => k !== "itens_apartamento")
+      .filter(([k]) => k !== "itens_apartamento" && k !== "material_limpeza")
       .reduce((s, [, v]) => s + v, 0);
 
     const receitaBruta = recComissao + recFaxina + recLav + recMat + recManut;
-    const custoTotal = custoFaxina + custoLav + custoMat + custoManut + totalFixosNoCusto;
+    const custoTotal = custoFaxina + custoLav + custoMaterialLimpeza + custoManut + totalFixosNoCusto;
     const liquida = receitaBruta - custoTotal;
     const margem = receitaBruta > 0 ? (liquida / receitaBruta) * 100 : 0;
 
     return {
       recComissao, recFaxina, recLav, recMat, recManut,
-      custoFaxina, custoLav, custoMat, custoManut, fixos,
+      custoFaxina, custoLav, custoMaterialLimpeza, custoManut, fixos,
       custoItensApt, receitaBruta, custoTotal, liquida, margem,
     };
   }, [reservas, imoveisMap, servicos, manuts, custos]);
@@ -148,7 +159,7 @@ export default function DREEmpresa() {
               <Row label="CUSTOS" valor={0} tipo="header" />
               <Row label="Custo de faxina" valor={calc.custoFaxina} />
               <Row label="Custo de Lavanderia" valor={calc.custoLav} />
-              <Row label="Custo de material de limpeza" valor={calc.custoMat} />
+              <Row label="Custo de material de limpeza" valor={calc.custoMaterialLimpeza} />
               <Row label="Custo de manutenção" valor={calc.custoManut} />
               {CUSTO_FIXO_ORDEM.map((k) => {
                 const v = calc.fixos[k] ?? 0;

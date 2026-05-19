@@ -47,6 +47,7 @@ const App = () => (
               <Route path="/imoveis" element={<RequireRole roles={[...STAFF]}><Imoveis /></RequireRole>} />
               <Route path="/hospedagens" element={<RequireRole roles={[...STAFF]}><Hospedagens /></RequireRole>} />
               <Route path="/servicos" element={<RequireRole roles={[...STAFF]}><Servicos /></RequireRole>} />
+              <Route path="/servicos" element={<Navigate to="/manutencoes" replace />} />
               <Route path="/manutencoes" element={<RequireRole roles={[...STAFF]}><Manutencoes /></RequireRole>} />
               <Route path="/adiantamentos" element={<RequireRole roles={[...STAFF]}><Adiantamentos /></RequireRole>} />
               <Route path="/importar" element={<RequireRole roles={[...STAFF]}><Importar /></RequireRole>} />

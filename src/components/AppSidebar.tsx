@@ -45,8 +45,7 @@ const groups: NavGroup[] = [
     label: "Operacional",
     items: [
       { title: "Hospedagens", url: "/hospedagens", icon: CalendarRange, roles: ALL_STAFF },
-      { title: "Serviços", url: "/servicos", icon: Receipt, roles: ALL_STAFF },
-      { title: "Manutenções", url: "/manutencoes", icon: Wrench, roles: ALL_STAFF },
+      { title: "Serviços & Manutenções", url: "/manutencoes", icon: Wrench, roles: ALL_STAFF },
       { title: "Adiantamentos", url: "/adiantamentos", icon: Wallet, roles: ALL_STAFF },
       { title: "Custos da empresa", url: "/custos", icon: Receipt, roles: ALL_STAFF },
       { title: "Importar Airbnb", url: "/importar", icon: Upload, roles: ALL_STAFF },

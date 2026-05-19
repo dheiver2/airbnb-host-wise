@@ -4,14 +4,23 @@ import { PageHeader } from "@/components/PageHeader";
 import { MonthPicker } from "@/components/MonthPicker";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { brl, monthInputValue, monthRange, monthBR, pct } from "@/lib/format";
+import { brl, monthRange, monthBR, pct } from "@/lib/format";
 import { useCompetenciaState } from "@/hooks/useLatestCompetencia";
 import { Printer } from "lucide-react";
 
+// Ordem fixa pelo template SA7D (image referência):
+// Gestão, Logística, Chat, Escritório — depois Folha e Diversos (mantidos pra
+// integridade da soma). Itens p/Apartamento sai DESTE bloco e vira linha
+// destacada abaixo da Receita Líquida (não entra em Custo Total).
+const CUSTO_FIXO_ORDEM = ["gestao", "logistica", "chat", "escritorio", "folha", "diversos"] as const;
 const CUSTO_LABELS: Record<string, string> = {
-  gestao: "Gestão", logistica: "Logística", chat: "Chat / atendimento",
-  escritorio: "Escritório (base)", folha: "Folha de pagamento",
-  diversos: "Custos diversos", itens_apartamento: "Itens para apartamento",
+  gestao: "Custos de Gestão",
+  logistica: "Custos de Logística",
+  chat: "Custo do Chat",
+  escritorio: "Custo do escritório (Base)",
+  folha: "Custo de Folha de pagamento",
+  diversos: "Custos diversos",
+  itens_apartamento: "Custo dos itens p/Ap",
 };
 
 export default function DREEmpresa() {
@@ -40,7 +49,6 @@ export default function DREEmpresa() {
   }
 
   const calc = useMemo(() => {
-    // Receita de comissão
     const recComissao = reservas.reduce((acc, r) => {
       const im = imoveisMap[r.imovel_id];
       if (!im) return acc;
@@ -53,31 +61,44 @@ export default function DREEmpresa() {
     const recFaxina = sumServ("faxina", "valor_cobrado");
     const recLav = sumServ("lavanderia", "valor_cobrado");
     const recMat = sumServ("material", "valor_cobrado");
-    // Alinhado com DREInvestidor: se valor_cobrado nao foi precificado, cai
-    // no custo (repasse a custo). Sem o fallback, o investidor era cobrado
-    // mas a empresa nao registrava a receita correspondente.
+    // Fallback no custo quando valor_cobrado=0 com rateio=investidor
     const recManut = manuts.filter((x) => x.rateio === "investidor").reduce((s, x) => s + Number(x.valor_cobrado || x.custo || 0), 0);
 
     const custoFaxina = sumServ("faxina", "custo_real");
     const custoLav = sumServ("lavanderia", "custo_real");
     const custoMat = sumServ("material", "custo_real");
     const custoManut = manuts.reduce((s, x) => s + Number(x.custo || 0), 0);
-    // Manutenção empresa absorve = custo total sem cobrança
-    // Despesas fixas
+
+    // Despesas fixas agrupadas
     const fixos: Record<string, number> = {};
     custos.forEach((c) => { fixos[c.categoria] = (fixos[c.categoria] || 0) + Number(c.valor || 0); });
 
+    // Itens p/Apartamento: separado do custo total (linha de referência)
+    const custoItensApt = fixos["itens_apartamento"] ?? 0;
+    const totalFixosNoCusto = Object.entries(fixos)
+      .filter(([k]) => k !== "itens_apartamento")
+      .reduce((s, [, v]) => s + v, 0);
+
     const receitaBruta = recComissao + recFaxina + recLav + recMat + recManut;
-    const totalFixos = Object.values(fixos).reduce((s, v) => s + v, 0);
-    const custoTotal = custoFaxina + custoLav + custoMat + custoManut + totalFixos;
+    const custoTotal = custoFaxina + custoLav + custoMat + custoManut + totalFixosNoCusto;
     const liquida = receitaBruta - custoTotal;
     const margem = receitaBruta > 0 ? (liquida / receitaBruta) * 100 : 0;
 
-    return { recComissao, recFaxina, recLav, recMat, recManut, custoFaxina, custoLav, custoMat, custoManut, fixos, receitaBruta, custoTotal, liquida, margem };
+    return {
+      recComissao, recFaxina, recLav, recMat, recManut,
+      custoFaxina, custoLav, custoMat, custoManut, fixos,
+      custoItensApt, receitaBruta, custoTotal, liquida, margem,
+    };
   }, [reservas, imoveisMap, servicos, manuts, custos]);
 
-  const Row = ({ label, valor, tipo = "normal" as "normal" | "subtotal" | "total" | "header" }) => (
-    <li className={`flex items-center justify-between px-5 py-2.5 ${tipo === "total" ? "bg-muted/60 font-semibold text-base" : tipo === "subtotal" ? "bg-muted/30 font-medium" : tipo === "header" ? "bg-foreground/5 text-xs uppercase tracking-wide text-muted-foreground" : ""}`}>
+  const Row = ({ label, valor, tipo = "normal" as "normal" | "subtotal" | "total" | "header" | "destaque" }) => (
+    <li className={`flex items-center justify-between px-5 py-2.5 ${
+      tipo === "total" ? "bg-muted/60 font-semibold text-base"
+        : tipo === "subtotal" ? "bg-muted/30 font-medium"
+        : tipo === "header" ? "bg-foreground/5 text-xs uppercase tracking-wide text-muted-foreground"
+        : tipo === "destaque" ? "bg-yellow-100/60 dark:bg-yellow-900/30 font-medium border-l-4 border-yellow-500"
+        : ""
+    }`}>
       <span className={tipo === "header" ? "" : "text-sm"}>{label}</span>
       {tipo !== "header" && <span className={`num ${valor < 0 ? "text-destructive" : ""}`}>{brl(valor)}</span>}
     </li>
@@ -86,7 +107,7 @@ export default function DREEmpresa() {
   return (
     <>
       <PageHeader
-        title="DRE da Empresa"
+        title="DRE SA7D"
         description="Visão consolidada — receitas, custos e margem."
         actions={
           <div className="contents print:hidden sm:flex sm:w-full sm:flex-wrap sm:items-center sm:gap-2 lg:w-auto">
@@ -113,27 +134,42 @@ export default function DREEmpresa() {
         </div>
 
         <Card className="shadow-card">
-          <CardHeader><CardTitle className="text-base capitalize">DRE — {monthBR(mes + "-01")}</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base capitalize">DRE SA7D — {monthBR(mes + "-01")}</CardTitle></CardHeader>
           <CardContent className="p-0">
             <ul className="divide-y divide-border">
               <Row label="RECEITAS" valor={0} tipo="header" />
               <Row label="Receita de comissão" valor={calc.recComissao} />
               <Row label="Receita de faxina" valor={calc.recFaxina} />
               <Row label="Receita de lavanderia" valor={calc.recLav} />
-              <Row label="Receita de material de limpeza" valor={calc.recMat} />
-              <Row label="Receita de manutenção" valor={calc.recManut} />
+              <Row label="Receita para Material de limpeza" valor={calc.recMat} />
+              <Row label="Receita de Manutenção" valor={calc.recManut} />
               <Row label="= Receita Bruta" valor={calc.receitaBruta} tipo="subtotal" />
 
               <Row label="CUSTOS" valor={0} tipo="header" />
               <Row label="Custo de faxina" valor={calc.custoFaxina} />
-              <Row label="Custo de lavanderia" valor={calc.custoLav} />
+              <Row label="Custo de Lavanderia" valor={calc.custoLav} />
               <Row label="Custo de material de limpeza" valor={calc.custoMat} />
               <Row label="Custo de manutenção" valor={calc.custoManut} />
-              {Object.entries(calc.fixos).map(([k, v]) => <Row key={k} label={`Custo de ${CUSTO_LABELS[k] ?? k}`} valor={v} />)}
+              {CUSTO_FIXO_ORDEM.map((k) => {
+                const v = calc.fixos[k] ?? 0;
+                if (v === 0) return null; // não polui DRE com categorias zeradas
+                return <Row key={k} label={CUSTO_LABELS[k]} valor={v} />;
+              })}
               <Row label="= Custo Total" valor={calc.custoTotal} tipo="subtotal" />
 
-              <Row label={`= RECEITA LÍQUIDA · Margem ${pct(calc.margem)}`} valor={calc.liquida} tipo="total" />
+              <Row label={`= Receita Líquida · Margem ${pct(calc.margem)}`} valor={calc.liquida} tipo="total" />
+
+              {/* Linha de referência: Itens p/Apartamento NÃO entra no Custo Total */}
+              {calc.custoItensApt > 0 && (
+                <Row label="Custo dos itens p/Ap" valor={calc.custoItensApt} tipo="destaque" />
+              )}
             </ul>
+            {calc.custoItensApt > 0 && (
+              <div className="border-t border-border bg-muted/20 px-5 py-2 text-xs text-muted-foreground">
+                ⓘ "Custo dos itens p/Ap" é referência informativa — não compõe o Custo Total acima
+                (são investimentos no apartamento, separados do P&L operacional).
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

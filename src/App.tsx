@@ -14,7 +14,6 @@ import Imoveis from "./pages/Imoveis";
 import Parametros from "./pages/Parametros";
 import Hospedagens from "./pages/Hospedagens";
 import Servicos from "./pages/Servicos";
-import Manutencoes from "./pages/Manutencoes";
 import Adiantamentos from "./pages/Adiantamentos";
 import Custos from "./pages/Custos";
 import Importar from "./pages/Importar";
@@ -47,8 +46,8 @@ const App = () => (
               <Route path="/imoveis" element={<RequireRole roles={[...STAFF]}><Imoveis /></RequireRole>} />
               <Route path="/hospedagens" element={<RequireRole roles={[...STAFF]}><Hospedagens /></RequireRole>} />
               <Route path="/servicos" element={<RequireRole roles={[...STAFF]}><Servicos /></RequireRole>} />
-              <Route path="/servicos" element={<Navigate to="/manutencoes" replace />} />
-              <Route path="/manutencoes" element={<RequireRole roles={[...STAFF]}><Manutencoes /></RequireRole>} />
+              {/* /manutencoes virou aba dentro de /servicos — redirect pra cobrir bookmarks antigos */}
+              <Route path="/manutencoes" element={<Navigate to="/servicos" replace />} />
               <Route path="/adiantamentos" element={<RequireRole roles={[...STAFF]}><Adiantamentos /></RequireRole>} />
               <Route path="/importar" element={<RequireRole roles={[...STAFF]}><Importar /></RequireRole>} />
 

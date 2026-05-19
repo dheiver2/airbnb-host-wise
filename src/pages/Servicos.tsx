@@ -376,12 +376,12 @@ export default function Servicos() {
                 <TableHeader><TableRow>
                   <TableHead>Data</TableHead><TableHead>Imóvel</TableHead><TableHead>Tipo</TableHead>
                   <TableHead>Área</TableHead>
-                  <TableHead>Prestador</TableHead><TableHead>Custo</TableHead><TableHead>Cobrado</TableHead>
-                  <TableHead>Margem</TableHead><TableHead>Anexos</TableHead><TableHead></TableHead>
+                  <TableHead>Prestador</TableHead><TableHead>Custo</TableHead>
+                  <TableHead>Anexos</TableHead><TableHead></TableHead>
                 </TableRow></TableHeader>
                 <TableBody>
                   {listServ.length === 0 && (
-                    <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-8">Sem lançamentos.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">Sem lançamentos.</TableCell></TableRow>
                   )}
                   {listServ.map((s) => {
                     const anexos = getAnexos(s);
@@ -393,8 +393,6 @@ export default function Servicos() {
                         <TableCell>{s.area ? AREA_LABELS[s.area] ?? s.area : "—"}</TableCell>
                         <TableCell className="text-muted-foreground">{s.prestador ?? "—"}</TableCell>
                         <TableCell className="num">{brl(s.custo_real)}</TableCell>
-                        <TableCell className="num">{brl(s.valor_cobrado)}</TableCell>
-                        <TableCell className="num">{brl(Number(s.valor_cobrado) - Number(s.custo_real))}</TableCell>
                         <TableCell>
                           <Button
                             size="sm" variant="ghost" className="h-7 gap-1 px-2 text-xs"
@@ -513,12 +511,12 @@ export default function Servicos() {
                 <TableHeader><TableRow>
                   <TableHead>Data</TableHead><TableHead>Imóvel</TableHead><TableHead>Descrição</TableHead>
                   <TableHead>Área</TableHead>
-                  <TableHead>Custo</TableHead><TableHead>Cobrado</TableHead><TableHead>Rateio</TableHead>
+                  <TableHead>Custo</TableHead><TableHead>Rateio</TableHead>
                   <TableHead>Anexos</TableHead><TableHead></TableHead>
                 </TableRow></TableHeader>
                 <TableBody>
                   {listMan.length === 0 && (
-                    <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">Sem manutenções no mês.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">Sem manutenções no mês.</TableCell></TableRow>
                   )}
                   {listMan.map((m) => {
                     const anexos = getAnexos(m);
@@ -529,7 +527,6 @@ export default function Servicos() {
                         <TableCell className="text-muted-foreground max-w-[260px] truncate">{m.descricao}</TableCell>
                         <TableCell>{m.area ? AREA_LABELS[m.area] ?? m.area : "—"}</TableCell>
                         <TableCell className="num">{brl(m.custo)}</TableCell>
-                        <TableCell className="num">{brl(m.valor_cobrado)}</TableCell>
                         <TableCell>
                           <Badge variant={m.rateio === "investidor" ? "default" : "secondary"}>{m.rateio}</Badge>
                         </TableCell>

@@ -48,7 +48,8 @@ const groups: NavGroup[] = [
       { title: "Serviços", url: "/servicos", icon: Receipt, roles: ALL_STAFF },
       { title: "Manutenções", url: "/manutencoes", icon: Wrench, roles: ALL_STAFF },
       { title: "Adiantamentos", url: "/adiantamentos", icon: Wallet, roles: ALL_STAFF },
-      { title: "Custos da empresa", url: "/custos", icon: Receipt, roles: ADMIN_ONLY },
+      // Custos da empresa: removido da sidebar — disponivel como aba em /servicos
+      // A rota /custos continua valida pra bookmarks antigos
       { title: "Importar Airbnb", url: "/importar", icon: Upload, roles: ALL_STAFF },
     ],
   },

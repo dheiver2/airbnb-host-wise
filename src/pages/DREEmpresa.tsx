@@ -51,10 +51,13 @@ export default function DREEmpresa() {
   }
 
   const calc = useMemo(() => {
+    // Comissão sobre valor_liquido (após taxas Airbnb), com fallback ao bruto
+    // se a reserva não tem valor_liquido cadastrado. Padrão do Excel SA7D.
     const recComissao = reservas.reduce((acc, r) => {
       const im = imoveisMap[r.imovel_id];
       if (!im) return acc;
-      return acc + Number(r.valor_bruto || 0) * (Number(im.percentual_comissao) / 100);
+      const base = Number(r.valor_liquido || r.valor_bruto || 0);
+      return acc + base * (Number(im.percentual_comissao) / 100);
     }, 0);
 
     const sumServ = (tipo: string, field: "valor_cobrado" | "custo_real") =>

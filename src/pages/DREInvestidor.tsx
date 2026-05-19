@@ -51,7 +51,10 @@ export default function DREInvestidor() {
     const porImovel = imoveis.map((im) => {
       const rs = reservas.filter((x) => x.imovel_id === im.id);
       const faturamento = rs.reduce((s, x) => s + Number(x.valor_bruto || 0), 0);
-      const comissao = faturamento * (Number(im.percentual_comissao) / 100);
+      // Comissão sobre valor_liquido (após taxas Airbnb), consistente com DRE Empresa.
+      // Faturamento bruto continua sobre valor_bruto (mostrado ao investidor).
+      const baseComissao = rs.reduce((s, x) => s + Number(x.valor_liquido || x.valor_bruto || 0), 0);
+      const comissao = baseComissao * (Number(im.percentual_comissao) / 100);
       const ss = servicos.filter((x) => x.imovel_id === im.id);
       const despFaxina = ss.filter((x) => x.tipo === "faxina").reduce((s, x) => s + Number(x.valor_cobrado || 0), 0);
       const despLav = ss.filter((x) => x.tipo === "lavanderia").reduce((s, x) => s + Number(x.valor_cobrado || 0), 0);

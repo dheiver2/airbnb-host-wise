@@ -45,9 +45,10 @@ const groups: NavGroup[] = [
     label: "Operacional",
     items: [
       { title: "Hospedagens", url: "/hospedagens", icon: CalendarRange, roles: ALL_STAFF },
-      { title: "Serviços & Manutenções", url: "/manutencoes", icon: Wrench, roles: ALL_STAFF },
+      // Aponta pra /servicos que tem as 3 abas (Serviços + Manutenções + Custos da empresa)
+      { title: "Serviços & Manutenções", url: "/servicos", icon: Wrench, roles: ALL_STAFF },
       { title: "Adiantamentos", url: "/adiantamentos", icon: Wallet, roles: ALL_STAFF },
-      { title: "Custos da empresa", url: "/custos", icon: Receipt, roles: ALL_STAFF },
+      // Custos da empresa removido — agora é a 3ª aba em /servicos (visível só pra admin)
       { title: "Importar Airbnb", url: "/importar", icon: Upload, roles: ALL_STAFF },
     ],
   },

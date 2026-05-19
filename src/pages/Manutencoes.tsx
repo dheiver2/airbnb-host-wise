@@ -263,12 +263,12 @@ export default function Manutencoes() {
           <Table className="min-w-[820px]">
             <TableHeader><TableRow>
               <TableHead>Data</TableHead><TableHead>Imóvel</TableHead><TableHead>Descrição</TableHead>
-              <TableHead>Área</TableHead><TableHead>Custo</TableHead><TableHead>Cobrado</TableHead>
+              <TableHead>Área</TableHead><TableHead>Custo</TableHead>
               <TableHead>Rateio</TableHead><TableHead>Anexos</TableHead><TableHead></TableHead>
             </TableRow></TableHeader>
             <TableBody>
               {list.length === 0 && (
-                <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">Sem manutenções no mês.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">Sem manutenções no mês.</TableCell></TableRow>
               )}
               {list.map((m) => {
                 const anexos = getAnexos(m);
@@ -279,7 +279,6 @@ export default function Manutencoes() {
                     <TableCell className="text-muted-foreground max-w-[260px] truncate">{m.descricao}</TableCell>
                     <TableCell>{m.area ? AREA_LABELS[m.area] ?? m.area : "—"}</TableCell>
                     <TableCell className="num">{brl(m.custo)}</TableCell>
-                    <TableCell className="num">{brl(m.valor_cobrado)}</TableCell>
                     <TableCell>
                       <Badge variant={m.rateio === "investidor" ? "default" : "secondary"}>{m.rateio}</Badge>
                     </TableCell>

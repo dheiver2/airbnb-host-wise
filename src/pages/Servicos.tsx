@@ -86,6 +86,18 @@ function FileSelector({
   );
 }
 
+function StarRating({ value, onChange }: { value?: number; onChange: (n: number) => void }) {
+  return (
+    <div className="flex gap-1">
+      {[1, 2, 3, 4, 5].map((n) => (
+        <button key={n} type="button" onClick={() => onChange(value === n ? 0 : n)} className="text-yellow-500 hover:scale-110 transition-transform">
+          <Star className={`h-5 w-5 ${value && n <= value ? "fill-current" : ""}`} />
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function Servicos() {
   const { isAdmin } = useAuth();
   const [mes, setMes] = useCompetenciaState();

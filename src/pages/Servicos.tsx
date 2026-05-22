@@ -249,6 +249,10 @@ export default function Servicos() {
       prestador: formServ.prestador || null, mes_competencia: competencia, anexos: [],
       parametro_id: formServ.parametro_id || null, area: formServ.area || null,
       reserva_id: reservaId,
+      prestador_id: formServ.prestador_id || null,
+      tipo_servico_id: formServ.tipo_servico_id || null,
+      avaliacao: formServ.avaliacao || null,
+      avaliacao_comentario: formServ.avaliacao_comentario || null,
     }).select("id").single();
     if (error) return toast.error(error.message);
     if (filesServ.length > 0) {

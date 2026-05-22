@@ -41,17 +41,24 @@ export default function Imoveis() {
 
   async function save() {
     if (!editing?.codigo || !editing?.endereco || !editing?.investidor_id) return toast.error("Preencha código, endereço e investidor");
-    const payload = {
+    const payload: any = {
       codigo: editing.codigo, endereco: editing.endereco, tipo: editing.tipo ?? "studio",
       investidor_id: editing.investidor_id, capacidade: Number(editing.capacidade ?? 2),
       valor_faxina: Number(editing.valor_faxina ?? 0), valor_lavanderia: Number(editing.valor_lavanderia ?? 0),
       custo_faxina: Number(editing.custo_faxina ?? 0), custo_lavanderia: Number(editing.custo_lavanderia ?? 0),
       percentual_comissao: Number(editing.percentual_comissao ?? 20),
       status: editing.status ?? "ativo",
+      cep: editing.cep || null, numero: editing.numero || null, complemento: editing.complemento || null,
+      bairro: editing.bairro || null, cidade: editing.cidade || null, estado: editing.estado || null,
     };
     const res = editing.id ? await supabase.from("imoveis").update(payload).eq("id", editing.id) : await (supabase.from("imoveis") as any).insert(payload);
     if (res.error) return toast.error(res.error.message);
     toast.success("Salvo!"); setOpen(false); setEditing(null); load();
+  }
+
+  async function onCepBlur(cep: string) {
+    const r = await lookupCep(cep);
+    if (r) setEditing((prev: any) => ({ ...prev, endereco: prev?.endereco || r.endereco, bairro: prev?.bairro || r.bairro, cidade: prev?.cidade || r.cidade, estado: prev?.estado || r.estado }));
   }
 
   async function remove(id: string) {

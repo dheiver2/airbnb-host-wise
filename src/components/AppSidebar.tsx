@@ -1,7 +1,7 @@
 import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, Building2, Settings2, CalendarRange,
-  Wrench, Wallet, FileBarChart, Upload, Receipt, LogOut, UserCog, PieChart, ClipboardList, HardHat, Tags
+  Wrench, Wallet, FileBarChart, Upload, Receipt, LogOut, UserCog, PieChart, ClipboardList, HardHat, Tags, Shirt
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
@@ -55,10 +55,21 @@ const groups: NavGroup[] = [
     ],
   },
   {
+    label: "Resultados",
+    items: [
+      { title: "DRE SA7D", url: "/dre/sa7d", icon: FileBarChart, roles: ADMIN_ONLY },
+      { title: "DRE Investidor", url: "/dre/investidor", icon: FileBarChart, roles: ADMIN_ONLY },
+      { title: "DRE por Imóvel", url: "/dre/imovel", icon: Building2, roles: ADMIN_ONLY },
+    ],
+  },
+  {
     label: "Relatórios",
     items: [
-      { title: "DRE Investidor", url: "/dre/investidor", icon: FileBarChart, roles: ADMIN_ONLY },
-      { title: "DRE Empresa", url: "/dre/empresa", icon: FileBarChart, roles: ADMIN_ONLY },
+      { title: "Lavanderia", url: "/relatorios/lavanderia", icon: Shirt, roles: ADMIN_ONLY },
+      { title: "Manutenção", url: "/relatorios/manutencao", icon: Wrench, roles: ADMIN_ONLY },
+      { title: "Reservas", url: "/relatorios/reservas", icon: CalendarRange, roles: ADMIN_ONLY },
+      { title: "Pessoas", url: "/relatorios/pessoas", icon: Users, roles: ADMIN_ONLY },
+      { title: "Pagamentos", url: "/relatorios/pagamentos", icon: Wallet, roles: ADMIN_ONLY },
     ],
   },
   {

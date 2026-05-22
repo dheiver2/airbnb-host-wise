@@ -22,6 +22,12 @@ import Importar from "./pages/Importar";
 import Operacional from "./pages/Operacional";
 import DREInvestidor from "./pages/DREInvestidor";
 import DREEmpresa from "./pages/DREEmpresa";
+import DREImovel from "./pages/DREImovel";
+import RelatorioLavanderia from "./pages/RelatorioLavanderia";
+import RelatorioManutencao from "./pages/RelatorioManutencao";
+import RelatorioReservas from "./pages/RelatorioReservas";
+import RelatorioPessoas from "./pages/RelatorioPessoas";
+import RelatorioPagamentos from "./pages/RelatorioPagamentos";
 import Equipe from "./pages/Equipe";
 import MeuDre from "./pages/MeuDre";
 import NotFound from "./pages/NotFound.tsx";
@@ -64,7 +70,15 @@ const App = () => (
               <Route path="/dashboard" element={<RequireRole roles={[...ADMIN]}><Dashboard /></RequireRole>} />
               <Route path="/investidores" element={<RequireRole roles={[...ADMIN]}><Investidores /></RequireRole>} />
               <Route path="/dre/investidor" element={<RequireRole roles={[...ADMIN]}><DREInvestidor /></RequireRole>} />
-              <Route path="/dre/empresa" element={<RequireRole roles={[...ADMIN]}><DREEmpresa /></RequireRole>} />
+              <Route path="/dre/imovel" element={<RequireRole roles={[...ADMIN]}><DREImovel /></RequireRole>} />
+              <Route path="/dre/sa7d" element={<RequireRole roles={[...ADMIN]}><DREEmpresa /></RequireRole>} />
+              {/* /dre/empresa renomeado para /dre/sa7d — redirect cobre bookmarks */}
+              <Route path="/dre/empresa" element={<Navigate to="/dre/sa7d" replace />} />
+              <Route path="/relatorios/lavanderia" element={<RequireRole roles={[...ADMIN]}><RelatorioLavanderia /></RequireRole>} />
+              <Route path="/relatorios/manutencao" element={<RequireRole roles={[...ADMIN]}><RelatorioManutencao /></RequireRole>} />
+              <Route path="/relatorios/reservas" element={<RequireRole roles={[...ADMIN]}><RelatorioReservas /></RequireRole>} />
+              <Route path="/relatorios/pessoas" element={<RequireRole roles={[...ADMIN]}><RelatorioPessoas /></RequireRole>} />
+              <Route path="/relatorios/pagamentos" element={<RequireRole roles={[...ADMIN]}><RelatorioPagamentos /></RequireRole>} />
               <Route path="/equipe" element={<RequireRole roles={[...ADMIN]}><Equipe /></RequireRole>} />
               {/* Alias retro-compatível (bookmark antigo /usuarios → /equipe) */}
               <Route path="/usuarios" element={<Navigate to="/equipe" replace />} />

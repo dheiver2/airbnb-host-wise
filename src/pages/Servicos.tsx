@@ -412,9 +412,33 @@ export default function Servicos() {
                         <SelectContent>{AREAS.map((a) => <SelectItem key={a} value={a}>{AREA_LABELS[a]}</SelectItem>)}</SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-1.5 sm:col-span-2">
+                    <div className="space-y-1.5">
+                      <Label>Tipo de serviço (catálogo)</Label>
+                      <Select value={formServ.tipo_servico_id ?? ""} onValueChange={(v) => setFormServ({ ...formServ, tipo_servico_id: v })}>
+                        <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
+                        <SelectContent>
+                          {tiposServico.filter((t) => !formServ.area || t.area === formServ.area).map((t) => (
+                            <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
                       <Label>Prestador</Label>
-                      <Input value={formServ.prestador ?? ""} onChange={(e) => setFormServ({ ...formServ, prestador: e.target.value })} />
+                      <Select value={formServ.prestador_id ?? ""} onValueChange={(v) => {
+                        const p = prestadores.find((x) => x.id === v);
+                        setFormServ({ ...formServ, prestador_id: v, prestador: p?.nome ?? formServ.prestador });
+                      }}>
+                        <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectContent>
+                          {prestadores.map((p) => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <Label>Avaliação do serviço</Label>
+                      <StarRating value={formServ.avaliacao ?? 0} onChange={(n) => setFormServ({ ...formServ, avaliacao: n })} />
+                      <Textarea placeholder="Comentário (opcional)" value={formServ.avaliacao_comentario ?? ""} onChange={(e) => setFormServ({ ...formServ, avaliacao_comentario: e.target.value })} className="mt-2" rows={2} />
                     </div>
                     {(() => {
                       const p = params.find((x) => x.id === formServ.parametro_id);

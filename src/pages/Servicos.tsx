@@ -126,6 +126,10 @@ export default function Servicos() {
       .then(({ data }) => setImoveis(data ?? []));
     supabase.from("parametros_servico").select("*, imoveis(codigo)").eq("ativo", true).order("nome")
       .then(({ data }) => setParams(data ?? []));
+    (supabase.from("prestadores" as any) as any).select("id, nome, area").eq("ativo", true).order("nome")
+      .then(({ data }: any) => setPrestadores(data ?? []));
+    (supabase.from("tipos_servico" as any) as any).select("id, nome, area").eq("ativo", true).order("area").order("nome")
+      .then(({ data }: any) => setTiposServico(data ?? []));
   }, []);
 
   useEffect(() => { loadServ(); loadMan(); if (isAdmin) loadCustos(); }, [mes, isAdmin]);

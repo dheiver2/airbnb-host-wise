@@ -20,10 +20,11 @@ import { useCompetenciaState } from "@/hooks/useLatestCompetencia";
 import { useAuth } from "@/hooks/useAuth";
 
 const TIPOS_SERVICO = ["faxina", "lavanderia", "material", "manutencao"] as const;
-const AREAS = ["faxina", "lavanderia", "logistica", "casa", "manutencao", "escritorio"] as const;
+const AREAS = ["atendimento", "escritorio", "faxina", "lavanderia", "logistica", "manutencao"] as const;
 const AREA_LABELS: Record<string, string> = {
-  faxina: "Faxina", lavanderia: "Lavanderia", logistica: "Logística",
-  casa: "Casa", manutencao: "Manutenção", escritorio: "Escritório",
+  atendimento: "Atendimento", escritorio: "Escritório", faxina: "Faxina",
+  lavanderia: "Lavanderia", logistica: "Logística", manutencao: "Manutenção",
+  casa: "Casa", // legado — registros antigos com area=casa
 };
 
 // Custos fixos (visíveis só pra admin)

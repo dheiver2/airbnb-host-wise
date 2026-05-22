@@ -17,7 +17,11 @@ import { Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { lookupCep } from "@/lib/cep";
 
-const TIPOS = ["studio", "1Q", "2Q", "3Q", "cobertura"] as const;
+const TIPOS = ["studio", "1Q", "2Q", "3Q", "4Q", "cobertura"] as const;
+const TIPO_LABELS: Record<string, string> = {
+  studio: "Estúdio", "1Q": "1 quarto", "2Q": "2 quartos",
+  "3Q": "3 quartos", "4Q": "4 quartos ou mais", cobertura: "Cobertura",
+};
 
 export default function Imoveis() {
   const { isAdmin } = useAuth();
@@ -108,7 +112,7 @@ export default function Imoveis() {
                   <Label>Tipo</Label>
                   <Select value={editing?.tipo ?? "studio"} onValueChange={(v) => setEditing({ ...editing, tipo: v })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{TIPOS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                    <SelectContent>{TIPOS.map((t) => <SelectItem key={t} value={t}>{TIPO_LABELS[t] ?? t}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1.5"><Label>Capacidade (hóspedes)</Label><Input type="number" value={editing?.capacidade ?? 2} onChange={(e) => setEditing({ ...editing, capacidade: e.target.value })} /></div>
@@ -165,7 +169,7 @@ export default function Imoveis() {
                   <TableRow key={i.id}>
                     <TableCell className="font-medium">{i.codigo}</TableCell>
                     <TableCell className="text-muted-foreground max-w-[260px] truncate">{i.endereco}</TableCell>
-                    <TableCell><Badge variant="outline">{i.tipo}</Badge></TableCell>
+                    <TableCell><Badge variant="outline">{TIPO_LABELS[i.tipo] ?? i.tipo}</Badge></TableCell>
                     <TableCell>{i.investidores?.nome ?? "—"}</TableCell>
                     <TableCell className="num">{i.capacidade}</TableCell>
                     <TableCell className="num text-xs">{brl(i.valor_faxina)}<br /><span className="text-muted-foreground">custo {brl(i.custo_faxina)}</span></TableCell>

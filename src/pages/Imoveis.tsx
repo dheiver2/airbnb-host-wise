@@ -97,7 +97,13 @@ export default function Imoveis() {
                     searchPlaceholder="Buscar investidor..."
                   />
                 </div>
-                <div className="space-y-1.5 sm:col-span-2"><Label>Endereço *</Label><Input value={editing?.endereco ?? ""} onChange={(e) => setEditing({ ...editing, endereco: e.target.value })} /></div>
+                <div className="space-y-1.5 sm:col-span-2"><Label>Endereço (rua) *</Label><Input value={editing?.endereco ?? ""} onChange={(e) => setEditing({ ...editing, endereco: e.target.value })} /></div>
+                <div className="space-y-1.5"><Label>CEP</Label><Input value={editing?.cep ?? ""} onChange={(e) => setEditing({ ...editing, cep: e.target.value })} onBlur={(e) => onCepBlur(e.target.value)} placeholder="00000-000" /></div>
+                <div className="space-y-1.5"><Label>Número</Label><Input value={editing?.numero ?? ""} onChange={(e) => setEditing({ ...editing, numero: e.target.value })} /></div>
+                <div className="space-y-1.5 sm:col-span-2"><Label>Complemento</Label><Input value={editing?.complemento ?? ""} onChange={(e) => setEditing({ ...editing, complemento: e.target.value })} /></div>
+                <div className="space-y-1.5"><Label>Bairro</Label><Input value={editing?.bairro ?? ""} onChange={(e) => setEditing({ ...editing, bairro: e.target.value })} /></div>
+                <div className="space-y-1.5"><Label>Cidade</Label><Input value={editing?.cidade ?? ""} onChange={(e) => setEditing({ ...editing, cidade: e.target.value })} /></div>
+                <div className="space-y-1.5"><Label>UF</Label><Input maxLength={2} value={editing?.estado ?? ""} onChange={(e) => setEditing({ ...editing, estado: e.target.value.toUpperCase() })} /></div>
                 <div className="space-y-1.5">
                   <Label>Tipo</Label>
                   <Select value={editing?.tipo ?? "studio"} onValueChange={(v) => setEditing({ ...editing, tipo: v })}>

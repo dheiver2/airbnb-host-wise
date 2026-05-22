@@ -21,7 +21,9 @@ import Custos from "./pages/Custos";
 import Importar from "./pages/Importar";
 import Operacional from "./pages/Operacional";
 import Escalador from "./pages/Escalador";
+import ElosRoupas from "./pages/ElosRoupas";
 import RH from "./pages/RH";
+import RelatorioNotasFiscais from "./pages/RelatorioNotasFiscais";
 import DREInvestidor from "./pages/DREInvestidor";
 import DREEmpresa from "./pages/DREEmpresa";
 import DREImovel from "./pages/DREImovel";
@@ -59,6 +61,7 @@ const App = () => (
               {/* /manutencoes virou aba dentro de /servicos — redirect pra cobrir bookmarks antigos */}
               <Route path="/manutencoes" element={<Navigate to="/servicos" replace />} />
               <Route path="/escalador" element={<RequireRole roles={[...STAFF]}><Escalador /></RequireRole>} />
+              <Route path="/elos-roupas" element={<RequireRole roles={[...STAFF]}><ElosRoupas /></RequireRole>} />
               <Route path="/adiantamentos" element={<RequireRole roles={[...STAFF]}><Adiantamentos /></RequireRole>} />
               <Route path="/importar" element={<RequireRole roles={[...STAFF]}><Importar /></RequireRole>} />
 
@@ -82,6 +85,7 @@ const App = () => (
               <Route path="/relatorios/reservas" element={<RequireRole roles={[...ADMIN]}><RelatorioReservas /></RequireRole>} />
               <Route path="/relatorios/pessoas" element={<RequireRole roles={[...ADMIN]}><RelatorioPessoas /></RequireRole>} />
               <Route path="/relatorios/pagamentos" element={<RequireRole roles={[...ADMIN]}><RelatorioPagamentos /></RequireRole>} />
+              <Route path="/relatorios/notas-fiscais" element={<RequireRole roles={[...ADMIN]}><RelatorioNotasFiscais /></RequireRole>} />
               <Route path="/equipe" element={<RequireRole roles={[...ADMIN]}><Equipe /></RequireRole>} />
               <Route path="/rh" element={<RequireRole roles={[...ADMIN]}><RH /></RequireRole>} />
               {/* Alias retro-compatível (bookmark antigo /usuarios → /equipe) */}

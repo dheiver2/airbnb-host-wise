@@ -50,6 +50,7 @@ const groups: NavGroup[] = [
       // Aponta pra /servicos que tem as 3 abas (Serviços + Manutenções + Custos da empresa)
       { title: "Serviços & Manutenções", url: "/servicos", icon: Wrench, roles: ALL_STAFF },
       { title: "Escalador de Faxina", url: "/escalador", icon: Sparkles, roles: ALL_STAFF },
+      { title: "Elos de Roupas", url: "/elos-roupas", icon: Shirt, roles: ALL_STAFF },
       { title: "Adiantamentos", url: "/adiantamentos", icon: Wallet, roles: ALL_STAFF },
       // Custos da empresa removido — agora é a 3ª aba em /servicos (visível só pra admin)
       { title: "Importar Airbnb", url: "/importar", icon: Upload, roles: ALL_STAFF },
@@ -71,6 +72,7 @@ const groups: NavGroup[] = [
       { title: "Reservas", url: "/relatorios/reservas", icon: CalendarRange, roles: ADMIN_ONLY },
       { title: "Pessoas", url: "/relatorios/pessoas", icon: Users, roles: ADMIN_ONLY },
       { title: "Pagamentos", url: "/relatorios/pagamentos", icon: Wallet, roles: ADMIN_ONLY },
+      { title: "Notas Fiscais", url: "/relatorios/notas-fiscais", icon: FileBarChart, roles: ADMIN_ONLY },
     ],
   },
   {

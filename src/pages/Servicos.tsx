@@ -91,6 +91,8 @@ export default function Servicos() {
   const [mes, setMes] = useCompetenciaState();
   const [imoveis, setImoveis] = useState<any[]>([]);
   const [params, setParams] = useState<any[]>([]);
+  const [prestadores, setPrestadores] = useState<any[]>([]);
+  const [tiposServico, setTiposServico] = useState<any[]>([]);
 
   // ── Serviços ──
   const [listServ, setListServ] = useState<any[]>([]);

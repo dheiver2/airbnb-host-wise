@@ -291,6 +291,11 @@ export default function Servicos() {
       custo: Number(formMan.custo ?? 0), valor_cobrado: Number(formMan.valor_cobrado ?? 0),
       rateio: formMan.rateio, mes_competencia: competencia, anexos: [],
       area: formMan.area || null,
+      prestador: formMan.prestador || null,
+      prestador_id: formMan.prestador_id || null,
+      tipo_servico_id: formMan.tipo_servico_id || null,
+      avaliacao: formMan.avaliacao || null,
+      avaliacao_comentario: formMan.avaliacao_comentario || null,
     }).select("id").single();
     if (error) return toast.error(error.message);
     if (filesMan.length > 0) {

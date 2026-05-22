@@ -21,6 +21,7 @@ import Custos from "./pages/Custos";
 import Importar from "./pages/Importar";
 import Operacional from "./pages/Operacional";
 import Escalador from "./pages/Escalador";
+import RH from "./pages/RH";
 import DREInvestidor from "./pages/DREInvestidor";
 import DREEmpresa from "./pages/DREEmpresa";
 import DREImovel from "./pages/DREImovel";
@@ -82,6 +83,7 @@ const App = () => (
               <Route path="/relatorios/pessoas" element={<RequireRole roles={[...ADMIN]}><RelatorioPessoas /></RequireRole>} />
               <Route path="/relatorios/pagamentos" element={<RequireRole roles={[...ADMIN]}><RelatorioPagamentos /></RequireRole>} />
               <Route path="/equipe" element={<RequireRole roles={[...ADMIN]}><Equipe /></RequireRole>} />
+              <Route path="/rh" element={<RequireRole roles={[...ADMIN]}><RH /></RequireRole>} />
               {/* Alias retro-compatível (bookmark antigo /usuarios → /equipe) */}
               <Route path="/usuarios" element={<Navigate to="/equipe" replace />} />
 

@@ -77,6 +77,7 @@ const groups: NavGroup[] = [
     label: "Administração",
     items: [
       { title: "Equipe", url: "/equipe", icon: UserCog, roles: ADMIN_ONLY },
+      { title: "RH", url: "/rh", icon: Users, roles: ADMIN_ONLY },
     ],
   },
 ];

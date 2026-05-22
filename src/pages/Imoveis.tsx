@@ -15,6 +15,7 @@ import { brl } from "@/lib/format";
 import { Combobox } from "@/components/Combobox";
 import { Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { lookupCep } from "@/lib/cep";
 
 const TIPOS = ["studio", "1Q", "2Q", "3Q", "cobertura"] as const;
 

@@ -11,7 +11,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Paperclip, X, Upload } from "lucide-react";
+import { Plus, Trash2, Paperclip, X, Upload, Star } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { AnexoDownload } from "@/components/AnexoDownload";
 import { toast } from "sonner";
 import { brl, dateBR, monthRange } from "@/lib/format";
@@ -85,11 +86,25 @@ function FileSelector({
   );
 }
 
+function StarRating({ value, onChange }: { value?: number; onChange: (n: number) => void }) {
+  return (
+    <div className="flex gap-1">
+      {[1, 2, 3, 4, 5].map((n) => (
+        <button key={n} type="button" onClick={() => onChange(value === n ? 0 : n)} className="text-yellow-500 hover:scale-110 transition-transform">
+          <Star className={`h-5 w-5 ${value && n <= value ? "fill-current" : ""}`} />
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function Servicos() {
   const { isAdmin } = useAuth();
   const [mes, setMes] = useCompetenciaState();
   const [imoveis, setImoveis] = useState<any[]>([]);
   const [params, setParams] = useState<any[]>([]);
+  const [prestadores, setPrestadores] = useState<any[]>([]);
+  const [tiposServico, setTiposServico] = useState<any[]>([]);
 
   // ── Serviços ──
   const [listServ, setListServ] = useState<any[]>([]);
@@ -123,6 +138,10 @@ export default function Servicos() {
       .then(({ data }) => setImoveis(data ?? []));
     supabase.from("parametros_servico").select("*, imoveis(codigo)").eq("ativo", true).order("nome")
       .then(({ data }) => setParams(data ?? []));
+    (supabase.from("prestadores" as any) as any).select("id, nome, area").eq("ativo", true).order("nome")
+      .then(({ data }: any) => setPrestadores(data ?? []));
+    (supabase.from("tipos_servico" as any) as any).select("id, nome, area").eq("ativo", true).order("area").order("nome")
+      .then(({ data }: any) => setTiposServico(data ?? []));
   }, []);
 
   useEffect(() => { loadServ(); loadMan(); if (isAdmin) loadCustos(); }, [mes, isAdmin]);
@@ -230,6 +249,10 @@ export default function Servicos() {
       prestador: formServ.prestador || null, mes_competencia: competencia, anexos: [],
       parametro_id: formServ.parametro_id || null, area: formServ.area || null,
       reserva_id: reservaId,
+      prestador_id: formServ.prestador_id || null,
+      tipo_servico_id: formServ.tipo_servico_id || null,
+      avaliacao: formServ.avaliacao || null,
+      avaliacao_comentario: formServ.avaliacao_comentario || null,
     }).select("id").single();
     if (error) return toast.error(error.message);
     if (filesServ.length > 0) {
@@ -268,6 +291,11 @@ export default function Servicos() {
       custo: Number(formMan.custo ?? 0), valor_cobrado: Number(formMan.valor_cobrado ?? 0),
       rateio: formMan.rateio, mes_competencia: competencia, anexos: [],
       area: formMan.area || null,
+      prestador: formMan.prestador || null,
+      prestador_id: formMan.prestador_id || null,
+      tipo_servico_id: formMan.tipo_servico_id || null,
+      avaliacao: formMan.avaliacao || null,
+      avaliacao_comentario: formMan.avaliacao_comentario || null,
     }).select("id").single();
     if (error) return toast.error(error.message);
     if (filesMan.length > 0) {
@@ -384,9 +412,33 @@ export default function Servicos() {
                         <SelectContent>{AREAS.map((a) => <SelectItem key={a} value={a}>{AREA_LABELS[a]}</SelectItem>)}</SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-1.5 sm:col-span-2">
+                    <div className="space-y-1.5">
+                      <Label>Tipo de serviço (catálogo)</Label>
+                      <Select value={formServ.tipo_servico_id ?? ""} onValueChange={(v) => setFormServ({ ...formServ, tipo_servico_id: v })}>
+                        <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
+                        <SelectContent>
+                          {tiposServico.filter((t) => !formServ.area || t.area === formServ.area).map((t) => (
+                            <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
                       <Label>Prestador</Label>
-                      <Input value={formServ.prestador ?? ""} onChange={(e) => setFormServ({ ...formServ, prestador: e.target.value })} />
+                      <Select value={formServ.prestador_id ?? ""} onValueChange={(v) => {
+                        const p = prestadores.find((x) => x.id === v);
+                        setFormServ({ ...formServ, prestador_id: v, prestador: p?.nome ?? formServ.prestador });
+                      }}>
+                        <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectContent>
+                          {prestadores.map((p) => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <Label>Avaliação do serviço</Label>
+                      <StarRating value={formServ.avaliacao ?? 0} onChange={(n) => setFormServ({ ...formServ, avaliacao: n })} />
+                      <Textarea placeholder="Comentário (opcional)" value={formServ.avaliacao_comentario ?? ""} onChange={(e) => setFormServ({ ...formServ, avaliacao_comentario: e.target.value })} className="mt-2" rows={2} />
                     </div>
                     {(() => {
                       const p = params.find((x) => x.id === formServ.parametro_id);
@@ -540,6 +592,34 @@ export default function Servicos() {
                           <SelectItem value="empresa">Empresa absorve</SelectItem>
                         </SelectContent>
                       </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Tipo de serviço (catálogo)</Label>
+                      <Select value={formMan.tipo_servico_id ?? ""} onValueChange={(v) => setFormMan({ ...formMan, tipo_servico_id: v })}>
+                        <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
+                        <SelectContent>
+                          {tiposServico.filter((t) => !formMan.area || t.area === formMan.area).map((t) => (
+                            <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <Label>Prestador</Label>
+                      <Select value={formMan.prestador_id ?? ""} onValueChange={(v) => {
+                        const p = prestadores.find((x) => x.id === v);
+                        setFormMan({ ...formMan, prestador_id: v, prestador: p?.nome ?? formMan.prestador });
+                      }}>
+                        <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectContent>
+                          {prestadores.map((p) => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <Label>Avaliação do serviço</Label>
+                      <StarRating value={formMan.avaliacao ?? 0} onChange={(n) => setFormMan({ ...formMan, avaliacao: n })} />
+                      <Textarea placeholder="Comentário (opcional)" value={formMan.avaliacao_comentario ?? ""} onChange={(e) => setFormMan({ ...formMan, avaliacao_comentario: e.target.value })} className="mt-2" rows={2} />
                     </div>
                     <div className="space-y-1.5 sm:col-span-2">
                       <Label>Anexos</Label>

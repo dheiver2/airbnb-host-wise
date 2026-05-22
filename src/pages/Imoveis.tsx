@@ -15,6 +15,7 @@ import { brl } from "@/lib/format";
 import { Combobox } from "@/components/Combobox";
 import { Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { lookupCep } from "@/lib/cep";
 
 const TIPOS = ["studio", "1Q", "2Q", "3Q", "cobertura"] as const;
 
@@ -40,17 +41,24 @@ export default function Imoveis() {
 
   async function save() {
     if (!editing?.codigo || !editing?.endereco || !editing?.investidor_id) return toast.error("Preencha código, endereço e investidor");
-    const payload = {
+    const payload: any = {
       codigo: editing.codigo, endereco: editing.endereco, tipo: editing.tipo ?? "studio",
       investidor_id: editing.investidor_id, capacidade: Number(editing.capacidade ?? 2),
       valor_faxina: Number(editing.valor_faxina ?? 0), valor_lavanderia: Number(editing.valor_lavanderia ?? 0),
       custo_faxina: Number(editing.custo_faxina ?? 0), custo_lavanderia: Number(editing.custo_lavanderia ?? 0),
       percentual_comissao: Number(editing.percentual_comissao ?? 20),
       status: editing.status ?? "ativo",
+      cep: editing.cep || null, numero: editing.numero || null, complemento: editing.complemento || null,
+      bairro: editing.bairro || null, cidade: editing.cidade || null, estado: editing.estado || null,
     };
     const res = editing.id ? await supabase.from("imoveis").update(payload).eq("id", editing.id) : await (supabase.from("imoveis") as any).insert(payload);
     if (res.error) return toast.error(res.error.message);
     toast.success("Salvo!"); setOpen(false); setEditing(null); load();
+  }
+
+  async function onCepBlur(cep: string) {
+    const r = await lookupCep(cep);
+    if (r) setEditing((prev: any) => ({ ...prev, endereco: prev?.endereco || r.endereco, bairro: prev?.bairro || r.bairro, cidade: prev?.cidade || r.cidade, estado: prev?.estado || r.estado }));
   }
 
   async function remove(id: string) {
@@ -89,7 +97,13 @@ export default function Imoveis() {
                     searchPlaceholder="Buscar investidor..."
                   />
                 </div>
-                <div className="space-y-1.5 sm:col-span-2"><Label>Endereço *</Label><Input value={editing?.endereco ?? ""} onChange={(e) => setEditing({ ...editing, endereco: e.target.value })} /></div>
+                <div className="space-y-1.5 sm:col-span-2"><Label>Endereço (rua) *</Label><Input value={editing?.endereco ?? ""} onChange={(e) => setEditing({ ...editing, endereco: e.target.value })} /></div>
+                <div className="space-y-1.5"><Label>CEP</Label><Input value={editing?.cep ?? ""} onChange={(e) => setEditing({ ...editing, cep: e.target.value })} onBlur={(e) => onCepBlur(e.target.value)} placeholder="00000-000" /></div>
+                <div className="space-y-1.5"><Label>Número</Label><Input value={editing?.numero ?? ""} onChange={(e) => setEditing({ ...editing, numero: e.target.value })} /></div>
+                <div className="space-y-1.5 sm:col-span-2"><Label>Complemento</Label><Input value={editing?.complemento ?? ""} onChange={(e) => setEditing({ ...editing, complemento: e.target.value })} /></div>
+                <div className="space-y-1.5"><Label>Bairro</Label><Input value={editing?.bairro ?? ""} onChange={(e) => setEditing({ ...editing, bairro: e.target.value })} /></div>
+                <div className="space-y-1.5"><Label>Cidade</Label><Input value={editing?.cidade ?? ""} onChange={(e) => setEditing({ ...editing, cidade: e.target.value })} /></div>
+                <div className="space-y-1.5"><Label>UF</Label><Input maxLength={2} value={editing?.estado ?? ""} onChange={(e) => setEditing({ ...editing, estado: e.target.value.toUpperCase() })} /></div>
                 <div className="space-y-1.5">
                   <Label>Tipo</Label>
                   <Select value={editing?.tipo ?? "studio"} onValueChange={(v) => setEditing({ ...editing, tipo: v })}>

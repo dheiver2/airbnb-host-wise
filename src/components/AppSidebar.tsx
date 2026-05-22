@@ -1,7 +1,7 @@
 import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, Building2, Settings2, CalendarRange,
-  Wrench, Wallet, FileBarChart, Upload, Receipt, LogOut, UserCog, PieChart, ClipboardList
+  Wrench, Wallet, FileBarChart, Upload, Receipt, LogOut, UserCog, PieChart, ClipboardList, HardHat, Tags
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
@@ -38,6 +38,8 @@ const groups: NavGroup[] = [
     items: [
       { title: "Investidores", url: "/investidores", icon: Users, roles: ADMIN_ONLY },
       { title: "Imóveis", url: "/imoveis", icon: Building2, roles: ALL_STAFF },
+      { title: "Prestadores", url: "/prestadores", icon: HardHat, roles: ALL_STAFF },
+      { title: "Tipos de serviço", url: "/tipos-servico", icon: Tags, roles: ALL_STAFF },
       { title: "Parâmetros", url: "/parametros", icon: Settings2, roles: ALL_STAFF },
     ],
   },

@@ -12,6 +12,8 @@ import Dashboard from "./pages/Dashboard";
 import Investidores from "./pages/Investidores";
 import Imoveis from "./pages/Imoveis";
 import Parametros from "./pages/Parametros";
+import Prestadores from "./pages/Prestadores";
+import TiposServico from "./pages/TiposServico";
 import Hospedagens from "./pages/Hospedagens";
 import Servicos from "./pages/Servicos";
 import Adiantamentos from "./pages/Adiantamentos";
@@ -54,6 +56,9 @@ const App = () => (
               {/* Staff: cadastros e operação */}
               <Route path="/parametros" element={<RequireRole roles={[...STAFF]}><Parametros /></RequireRole>} />
               <Route path="/custos" element={<RequireRole roles={[...STAFF]}><Custos /></RequireRole>} />
+              <Route path="/prestadores" element={<RequireRole roles={[...STAFF]}><Prestadores /></RequireRole>} />
+              <Route path="/tipos-servico" element={<RequireRole roles={[...STAFF]}><TiposServico /></RequireRole>} />
+
 
               {/* Admin only: relatórios, cadastros financeiros e equipe */}
               <Route path="/dashboard" element={<RequireRole roles={[...ADMIN]}><Dashboard /></RequireRole>} />

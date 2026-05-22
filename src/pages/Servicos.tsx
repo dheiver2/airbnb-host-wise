@@ -160,7 +160,7 @@ export default function Servicos() {
     const { error } = await supabase.from("custos_fixos").insert({
       mes_competencia: competencia, categoria: formCustos.categoria,
       descricao: formCustos.descricao, valor: Number(formCustos.valor),
-    });
+    } as any);
     if (error) return toast.error(error.message);
     toast.success("Custo lançado"); setOpenCustos(false); setFormCustos({}); loadCustos();
   }

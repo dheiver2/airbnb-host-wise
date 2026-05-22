@@ -106,15 +106,21 @@ export type Database = {
       }
       imoveis: {
         Row: {
+          bairro: string | null
           capacidade: number
+          cep: string | null
+          cidade: string | null
           codigo: string
+          complemento: string | null
           conta_id: string
           created_at: string
           custo_faxina: number
           custo_lavanderia: number
           endereco: string
+          estado: string | null
           id: string
           investidor_id: string
+          numero: string | null
           percentual_comissao: number
           status: Database["public"]["Enums"]["status_geral"]
           tipo: Database["public"]["Enums"]["tipo_imovel"]
@@ -123,15 +129,21 @@ export type Database = {
           valor_lavanderia: number
         }
         Insert: {
+          bairro?: string | null
           capacidade?: number
+          cep?: string | null
+          cidade?: string | null
           codigo: string
+          complemento?: string | null
           conta_id: string
           created_at?: string
           custo_faxina?: number
           custo_lavanderia?: number
           endereco: string
+          estado?: string | null
           id?: string
           investidor_id: string
+          numero?: string | null
           percentual_comissao?: number
           status?: Database["public"]["Enums"]["status_geral"]
           tipo?: Database["public"]["Enums"]["tipo_imovel"]
@@ -140,15 +152,21 @@ export type Database = {
           valor_lavanderia?: number
         }
         Update: {
+          bairro?: string | null
           capacidade?: number
+          cep?: string | null
+          cidade?: string | null
           codigo?: string
+          complemento?: string | null
           conta_id?: string
           created_at?: string
           custo_faxina?: number
           custo_lavanderia?: number
           endereco?: string
+          estado?: string | null
           id?: string
           investidor_id?: string
+          numero?: string | null
           percentual_comissao?: number
           status?: Database["public"]["Enums"]["status_geral"]
           tipo?: Database["public"]["Enums"]["tipo_imovel"]
@@ -207,44 +225,86 @@ export type Database = {
       }
       investidores: {
         Row: {
+          agencia: string | null
+          bairro: string | null
+          banco: string | null
+          cep: string | null
+          cidade: string | null
+          complemento: string | null
+          conta: string | null
           conta_id: string
           created_at: string
+          data_nascimento: string | null
           documento: string | null
+          documento_url: string | null
           email: string | null
+          endereco: string | null
+          estado: string | null
           id: string
           nome: string
+          numero: string | null
           observacoes: string | null
           pix: string | null
           status: Database["public"]["Enums"]["status_geral"]
           telefone: string | null
+          tipo_conta: string | null
+          titular_conta: string | null
           updated_at: string
           user_id: string | null
         }
         Insert: {
+          agencia?: string | null
+          bairro?: string | null
+          banco?: string | null
+          cep?: string | null
+          cidade?: string | null
+          complemento?: string | null
+          conta?: string | null
           conta_id: string
           created_at?: string
+          data_nascimento?: string | null
           documento?: string | null
+          documento_url?: string | null
           email?: string | null
+          endereco?: string | null
+          estado?: string | null
           id?: string
           nome: string
+          numero?: string | null
           observacoes?: string | null
           pix?: string | null
           status?: Database["public"]["Enums"]["status_geral"]
           telefone?: string | null
+          tipo_conta?: string | null
+          titular_conta?: string | null
           updated_at?: string
           user_id?: string | null
         }
         Update: {
+          agencia?: string | null
+          bairro?: string | null
+          banco?: string | null
+          cep?: string | null
+          cidade?: string | null
+          complemento?: string | null
+          conta?: string | null
           conta_id?: string
           created_at?: string
+          data_nascimento?: string | null
           documento?: string | null
+          documento_url?: string | null
           email?: string | null
+          endereco?: string | null
+          estado?: string | null
           id?: string
           nome?: string
+          numero?: string | null
           observacoes?: string | null
           pix?: string | null
           status?: Database["public"]["Enums"]["status_geral"]
           telefone?: string | null
+          tipo_conta?: string | null
+          titular_conta?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -254,6 +314,8 @@ export type Database = {
         Row: {
           anexos: Json | null
           area: string | null
+          avaliacao: number | null
+          avaliacao_comentario: string | null
           categoria: string | null
           conta_id: string
           created_at: string
@@ -264,13 +326,18 @@ export type Database = {
           imovel_id: string
           mes_competencia: string
           parametro_id: string | null
+          prestador: string | null
+          prestador_id: string | null
           rateio: Database["public"]["Enums"]["rateio_manutencao"]
           status: string
+          tipo_servico_id: string | null
           valor_cobrado: number
         }
         Insert: {
           anexos?: Json | null
           area?: string | null
+          avaliacao?: number | null
+          avaliacao_comentario?: string | null
           categoria?: string | null
           conta_id: string
           created_at?: string
@@ -281,13 +348,18 @@ export type Database = {
           imovel_id: string
           mes_competencia: string
           parametro_id?: string | null
+          prestador?: string | null
+          prestador_id?: string | null
           rateio?: Database["public"]["Enums"]["rateio_manutencao"]
           status?: string
+          tipo_servico_id?: string | null
           valor_cobrado?: number
         }
         Update: {
           anexos?: Json | null
           area?: string | null
+          avaliacao?: number | null
+          avaliacao_comentario?: string | null
           categoria?: string | null
           conta_id?: string
           created_at?: string
@@ -298,8 +370,11 @@ export type Database = {
           imovel_id?: string
           mes_competencia?: string
           parametro_id?: string | null
+          prestador?: string | null
+          prestador_id?: string | null
           rateio?: Database["public"]["Enums"]["rateio_manutencao"]
           status?: string
+          tipo_servico_id?: string | null
           valor_cobrado?: number
         }
         Relationships: [
@@ -315,6 +390,20 @@ export type Database = {
             columns: ["parametro_id"]
             isOneToOne: false
             referencedRelation: "parametros_servico"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manutencoes_prestador_id_fkey"
+            columns: ["prestador_id"]
+            isOneToOne: false
+            referencedRelation: "prestadores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manutencoes_tipo_servico_id_fkey"
+            columns: ["tipo_servico_id"]
+            isOneToOne: false
+            referencedRelation: "tipos_servico"
             referencedColumns: ["id"]
           },
         ]
@@ -408,6 +497,51 @@ export type Database = {
         }
         Relationships: []
       }
+      prestadores: {
+        Row: {
+          area: string | null
+          ativo: boolean
+          conta_id: string
+          created_at: string
+          documento: string | null
+          email: string | null
+          id: string
+          nome: string
+          observacoes: string | null
+          pix: string | null
+          telefone: string | null
+          updated_at: string
+        }
+        Insert: {
+          area?: string | null
+          ativo?: boolean
+          conta_id: string
+          created_at?: string
+          documento?: string | null
+          email?: string | null
+          id?: string
+          nome: string
+          observacoes?: string | null
+          pix?: string | null
+          telefone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          area?: string | null
+          ativo?: boolean
+          conta_id?: string
+          created_at?: string
+          documento?: string | null
+          email?: string | null
+          id?: string
+          nome?: string
+          observacoes?: string | null
+          pix?: string | null
+          telefone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -492,6 +626,8 @@ export type Database = {
         Row: {
           anexos: Json | null
           area: string | null
+          avaliacao: number | null
+          avaliacao_comentario: string | null
           conta_id: string
           created_at: string
           custo_real: number
@@ -502,13 +638,17 @@ export type Database = {
           observacoes: string | null
           parametro_id: string | null
           prestador: string | null
+          prestador_id: string | null
           reserva_id: string | null
           tipo: Database["public"]["Enums"]["tipo_servico_op"]
+          tipo_servico_id: string | null
           valor_cobrado: number
         }
         Insert: {
           anexos?: Json | null
           area?: string | null
+          avaliacao?: number | null
+          avaliacao_comentario?: string | null
           conta_id: string
           created_at?: string
           custo_real?: number
@@ -519,13 +659,17 @@ export type Database = {
           observacoes?: string | null
           parametro_id?: string | null
           prestador?: string | null
+          prestador_id?: string | null
           reserva_id?: string | null
           tipo: Database["public"]["Enums"]["tipo_servico_op"]
+          tipo_servico_id?: string | null
           valor_cobrado?: number
         }
         Update: {
           anexos?: Json | null
           area?: string | null
+          avaliacao?: number | null
+          avaliacao_comentario?: string | null
           conta_id?: string
           created_at?: string
           custo_real?: number
@@ -536,8 +680,10 @@ export type Database = {
           observacoes?: string | null
           parametro_id?: string | null
           prestador?: string | null
+          prestador_id?: string | null
           reserva_id?: string | null
           tipo?: Database["public"]["Enums"]["tipo_servico_op"]
+          tipo_servico_id?: string | null
           valor_cobrado?: number
         }
         Relationships: [
@@ -556,13 +702,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "servicos_operacionais_prestador_id_fkey"
+            columns: ["prestador_id"]
+            isOneToOne: false
+            referencedRelation: "prestadores"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "servicos_operacionais_reserva_id_fkey"
             columns: ["reserva_id"]
             isOneToOne: false
             referencedRelation: "reservas"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "servicos_operacionais_tipo_servico_id_fkey"
+            columns: ["tipo_servico_id"]
+            isOneToOne: false
+            referencedRelation: "tipos_servico"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      tipos_servico: {
+        Row: {
+          area: string
+          ativo: boolean
+          conta_id: string
+          created_at: string
+          descricao: string | null
+          id: string
+          nome: string
+          updated_at: string
+        }
+        Insert: {
+          area: string
+          ativo?: boolean
+          conta_id: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome: string
+          updated_at?: string
+        }
+        Update: {
+          area?: string
+          ativo?: boolean
+          conta_id?: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {

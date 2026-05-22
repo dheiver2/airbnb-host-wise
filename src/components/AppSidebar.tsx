@@ -1,7 +1,7 @@
 import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, Building2, Settings2, CalendarRange,
-  Wrench, Wallet, FileBarChart, Upload, Receipt, LogOut, UserCog, PieChart, ClipboardList, HardHat, Tags, Shirt
+  Wrench, Wallet, FileBarChart, Upload, Receipt, LogOut, UserCog, PieChart, ClipboardList, HardHat, Tags, Shirt, Sparkles
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
@@ -49,6 +49,7 @@ const groups: NavGroup[] = [
       { title: "Hospedagens", url: "/hospedagens", icon: CalendarRange, roles: ALL_STAFF },
       // Aponta pra /servicos que tem as 3 abas (Serviços + Manutenções + Custos da empresa)
       { title: "Serviços & Manutenções", url: "/servicos", icon: Wrench, roles: ALL_STAFF },
+      { title: "Escalador de Faxina", url: "/escalador", icon: Sparkles, roles: ALL_STAFF },
       { title: "Adiantamentos", url: "/adiantamentos", icon: Wallet, roles: ALL_STAFF },
       // Custos da empresa removido — agora é a 3ª aba em /servicos (visível só pra admin)
       { title: "Importar Airbnb", url: "/importar", icon: Upload, roles: ALL_STAFF },

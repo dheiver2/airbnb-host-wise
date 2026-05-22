@@ -20,6 +20,7 @@ import Adiantamentos from "./pages/Adiantamentos";
 import Custos from "./pages/Custos";
 import Importar from "./pages/Importar";
 import Operacional from "./pages/Operacional";
+import Escalador from "./pages/Escalador";
 import DREInvestidor from "./pages/DREInvestidor";
 import DREEmpresa from "./pages/DREEmpresa";
 import DREImovel from "./pages/DREImovel";
@@ -56,6 +57,7 @@ const App = () => (
               <Route path="/servicos" element={<RequireRole roles={[...STAFF]}><Servicos /></RequireRole>} />
               {/* /manutencoes virou aba dentro de /servicos — redirect pra cobrir bookmarks antigos */}
               <Route path="/manutencoes" element={<Navigate to="/servicos" replace />} />
+              <Route path="/escalador" element={<RequireRole roles={[...STAFF]}><Escalador /></RequireRole>} />
               <Route path="/adiantamentos" element={<RequireRole roles={[...STAFF]}><Adiantamentos /></RequireRole>} />
               <Route path="/importar" element={<RequireRole roles={[...STAFF]}><Importar /></RequireRole>} />
 

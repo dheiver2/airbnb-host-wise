@@ -593,6 +593,34 @@ export default function Servicos() {
                         </SelectContent>
                       </Select>
                     </div>
+                    <div className="space-y-1.5">
+                      <Label>Tipo de serviço (catálogo)</Label>
+                      <Select value={formMan.tipo_servico_id ?? ""} onValueChange={(v) => setFormMan({ ...formMan, tipo_servico_id: v })}>
+                        <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
+                        <SelectContent>
+                          {tiposServico.filter((t) => !formMan.area || t.area === formMan.area).map((t) => (
+                            <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <Label>Prestador</Label>
+                      <Select value={formMan.prestador_id ?? ""} onValueChange={(v) => {
+                        const p = prestadores.find((x) => x.id === v);
+                        setFormMan({ ...formMan, prestador_id: v, prestador: p?.nome ?? formMan.prestador });
+                      }}>
+                        <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectContent>
+                          {prestadores.map((p) => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <Label>Avaliação do serviço</Label>
+                      <StarRating value={formMan.avaliacao ?? 0} onChange={(n) => setFormMan({ ...formMan, avaliacao: n })} />
+                      <Textarea placeholder="Comentário (opcional)" value={formMan.avaliacao_comentario ?? ""} onChange={(e) => setFormMan({ ...formMan, avaliacao_comentario: e.target.value })} className="mt-2" rows={2} />
+                    </div>
                     <div className="space-y-1.5 sm:col-span-2">
                       <Label>Anexos</Label>
                       <FileSelector files={filesMan} onChange={setFilesMan} inputRef={fileInputManRef} />
